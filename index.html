@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gastos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat+Alternates:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/master.css">
+    <link rel="shortcut icon" href="assets/images/favicon.png" type="image/x-icon">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta/dist/vanta.fog.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+
+<body>
+
+    <div id="vanta-bg"></div>
+
+    <div id="app">
+
+        <header>
+            <div class="header-left">
+                <h1>Mis Gastos</h1>
+                <p id="subtitle">Resumen mensual</p>
+            </div>
+            <nav class="month-nav">
+                <button id="prev-month" title="Mes anterior"><i data-lucide="chevron-left"></i></button>
+                <span id="month-label">–</span>
+                <button id="next-month" title="Mes siguiente"><i data-lucide="chevron-right"></i></button>
+            </nav>
+        </header>
+
+        <div class="salary-row">
+            <i data-lucide="banknote" class="salary-icon"></i>
+            <label>Sueldo</label>
+            <input type="text" id="salary-input" placeholder="0" />
+        </div>
+
+        <div class="stats">
+            <div class="stat-card spent" style="animation-delay:0s">
+                <i data-lucide="trending-up" class="stat-icon"></i>
+                <div class="label">Gastado</div>
+                <div class="value" id="stat-spent">$0</div>
+            </div>
+            <div class="stat-card left" style="animation-delay:0.05s">
+                <i data-lucide="wallet" class="stat-icon"></i>
+                <div class="label">Disponible</div>
+                <div class="value" id="stat-left">$0</div>
+            </div>
+            <div class="stat-card pct" style="animation-delay:0.1s">
+                <i data-lucide="pie-chart" class="stat-icon"></i>
+                <div class="label">Usado</div>
+                <div class="value" id="stat-pct">0%</div>
+            </div>
+        </div>
+
+        <div class="progress-wrap">
+            <div class="progress-label">
+                <span>Progreso del mes</span>
+                <span id="prog-label-pct">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+            </div>
+        </div>
+
+        <div class="feed-header">
+            <h2>Gastos</h2>
+            <span class="count-badge" id="feed-count">0</span>
+        </div>
+
+        <div id="feed"></div>
+    </div>
+
+    <!-- FAB -->
+    <button class="fab" id="open-modal">
+        <i data-lucide="plus"></i>
+        Nuevo gasto
+    </button>
+
+    <!-- MODAL NUEVO GASTO -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Agregar gasto</h3>
+                <button class="modal-x" id="close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Nombre</label>
+                    <input type="text" id="m-name" placeholder="Ej: Arriendo" />
+                </div>
+                <div class="form-field">
+                    <label>Monto ($)</label>
+                    <input type="text" id="m-amount" placeholder="0" />
+                </div>
+            </div>
+            <div class="form-field">
+                <label>Fecha</label>
+                <input type="date" id="m-date" />
+            </div>
+            <div class="form-field">
+                <label>Tipo de gasto</label>
+                <div class="type-selector" id="m-type-selector">
+                    <button class="type-btn active" data-type="normal">
+                        <i data-lucide="circle-dot"></i>
+                        Normal
+                    </button>
+                    <button class="type-btn" data-type="quincenal">
+                        <i data-lucide="calendar-range"></i>
+                        Quincenal
+                    </button>
+                </div>
+            </div>
+            <div class="form-field">
+                <label>Notas (opcional)</label>
+                <textarea id="m-notes" rows="2" placeholder="Observaciones..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" id="close-modal-2">Cancelar</button>
+                <button class="btn btn-save" id="save-expense">
+                    <i data-lucide="check"></i>
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL LATERAL SUBGASTOS -->
+    <div class="subpanel-overlay" id="subpanel-overlay"></div>
+    <aside class="subpanel" id="subpanel">
+
+        <div class="subpanel-header">
+            <div class="subpanel-title-wrap">
+                <div class="subpanel-dot" id="subpanel-dot"></div>
+                <div>
+                    <h2 id="subpanel-title">Subgastos</h2>
+                    <p class="subpanel-budget" id="subpanel-budget"></p>
+                </div>
+            </div>
+            <button class="subpanel-close" id="subpanel-close"><i data-lucide="x"></i></button>
+        </div>
+
+        <!-- Toggle Q1/Q2 — solo visible si es quincenal -->
+        <div class="quincenal-toggle-wrap" id="quincenal-toggle-wrap">
+            <div class="quincenal-toggle" id="quincenal-toggle">
+                <button class="q-btn active" data-q="1">
+                    <i data-lucide="calendar"></i>
+                    1ª Quincena
+                </button>
+                <button class="q-btn" data-q="2">
+                    <i data-lucide="calendar-check"></i>
+                    2ª Quincena
+                </button>
+            </div>
+        </div>
+
+        <div class="subpanel-progress-wrap">
+            <div class="subpanel-progress-bar">
+                <div class="subpanel-progress-fill" id="subpanel-progress-fill"></div>
+            </div>
+            <div class="subpanel-progress-labels">
+                <span id="subpanel-used-label">Usado: $0</span>
+                <span id="subpanel-left-label">Disponible: $0</span>
+            </div>
+        </div>
+
+        <div id="subpanel-feed"></div>
+
+        <div class="subpanel-add">
+            <h4><i data-lucide="plus-circle"></i> Agregar subgasto</h4>
+            <div class="subpanel-form-row">
+                <div class="form-field">
+                    <label>Nombre</label>
+                    <input type="text" id="sub-name" placeholder="Ej: Agua" />
+                </div>
+                <div class="form-field">
+                    <label>Monto ($)</label>
+                    <input type="text" id="sub-amount" placeholder="0" />
+                </div>
+            </div>
+            <div class="form-field">
+                <label>Notas (opcional)</label>
+                <input type="text" id="sub-notes" placeholder="Observación..." />
+            </div>
+            <button class="btn btn-save subpanel-save-btn" id="sub-save">
+                <i data-lucide="plus"></i>
+                Agregar
+            </button>
+        </div>
+    </aside>
+
+    <!-- TOAST -->
+    <div id="toast">
+        <span class="toast-icon-wrap"><i data-lucide="info" id="toast-icon"></i></span>
+        <span id="toast-msg"></span>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
