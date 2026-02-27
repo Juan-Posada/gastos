@@ -303,7 +303,7 @@ header {
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--blur);
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow: visible; /* no cortar el detalle expandido */
   transition: var(--trans);
   animation: fadeUp 0.4s ease both;
 }
@@ -439,12 +439,17 @@ header {
 .item-detail {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1);
+  transition: max-height 0.42s cubic-bezier(0.4,0,0.2,1);
+  border-radius: 0 0 var(--radius) var(--radius);
 }
-.item-detail.open { max-height: 360px; }
+.item-detail.open {
+  max-height: 700px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 .item-detail-inner {
-  padding: 0 14px 14px;
+  padding: 0 14px 16px;
   border-top: 1px solid var(--glass-border);
 }
 
@@ -1059,6 +1064,13 @@ header {
   .detail-fields { grid-template-columns: 1fr; }
   .subpanel-form-row { grid-template-columns: 1fr; }
   .modal .form-row { grid-template-columns: 1fr; }
+
+  /* scroll suave en el detalle expandido en iOS/Android */
+  .item-detail.open {
+    max-height: 80vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ─── SCROLLBAR ─────────────────────────────────────── */
