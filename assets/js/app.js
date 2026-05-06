@@ -1,67 +1,108 @@
 /* ══════════════════════════════════════════════════════
-   CONSTANTS & DEFAULTS
+   APP.JS  —  Lógica principal
+   • Sin gastos predefinidos
+   • Persistencia en Firestore (por usuario)
+   • Compatible con Google Auth
+══════════════════════════════════════════════════════ */
+
+import { db, currentUser }         from "./auth.js";
+import { doc, getDoc, setDoc }     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* ══════════════════════════════════════════════════════
+   CONSTANTS
 ══════════════════════════════════════════════════════ */
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-const COLORS = ['#b56eff','#e879f9','#7c3aed','#a78bfa','#c084fc',
-                '#d946ef','#8b5cf6','#818cf8','#e040fb','#9333ea','#a21caf'];
-
-const DEFAULT_SALARY = 1860000;
-const DEFAULT_EXPENSES = [
-  { name: 'Casa',          amount: 440000 },
-  { name: 'Deudas',        amount: 150000 },
-  { name: 'PC',            amount: 100000 },
-  { name: 'Celulares',     amount: 80000  },
-  { name: 'Madre',         amount: 280000 },
-  { name: 'Titos',         amount: 60000  },
-  { name: 'Transporte',    amount: 140000 },
-  { name: 'Seis',          amount: 70000  },
-  { name: 'Mis cosas',     amount: 140000 },
-  { name: 'Madre y Karla', amount: 280000 },
-  { name: 'Tenis',         amount: 50000  },
+const COLORS = [
+  '#E63E88','#384D95','#f06aaa','#4f68c0','#b82e6b',
+  '#263570','#e8699f','#6479c8','#c93578','#2d4284','#ea85b5',
 ];
 
 /* ══════════════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════════════ */
-let activePanelId  = null;   // ID del gasto con panel abierto
-let activePanelQ   = 1;      // quincena activa en el panel (1 o 2)
-let modalType      = 'normal'; // tipo seleccionado en el modal
+let activePanelId = null;
+let activePanelQ  = 1;
+let modalType     = 'normal';
+let isSaving      = false;   // debounce guard para Firestore
 
-let state = loadState();
+let state = buildEmptyState();
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem('gastos_app_v3');
-    if (raw) return JSON.parse(raw);
-  } catch (e) { /* */ }
-
+function buildEmptyState() {
   const now = new Date();
-  const key = monthKey(now.getFullYear(), now.getMonth());
-  const expenses = DEFAULT_EXPENSES.map((e, i) => makeExpense(e.name, e.amount, todayISO(), '', COLORS[i % COLORS.length], 'normal'));
-
   return {
-    salary:       DEFAULT_SALARY,
+    salary:       0,
     currentYear:  now.getFullYear(),
     currentMonth: now.getMonth(),
-    months:       { [key]: expenses },
+    months:       {},
   };
 }
 
-/* Factoría de gasto */
+/* ══════════════════════════════════════════════════════
+   FIRESTORE  —  Carga y guardado
+══════════════════════════════════════════════════════ */
+function userDocRef() {
+  if (!currentUser) return null;
+  return doc(db, "users", currentUser.uid, "data", "gastos");
+}
+
+export async function loadFromFirestore() {
+  const ref = userDocRef();
+  if (!ref) return;
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const remote = snap.data();
+      // Preservar mes/año de navegación actuales
+      state = {
+        ...remote,
+        currentYear:  state.currentYear,
+        currentMonth: state.currentMonth,
+      };
+    } else {
+      // Primera vez: estado vacío
+      state = buildEmptyState();
+    }
+  } catch (err) {
+    console.error("[Firestore] Error al cargar:", err);
+    toast("Error al cargar tus datos", "error");
+  }
+}
+
+let saveTimer;
+export function save() {
+  // Guardar siempre en localStorage como caché offline
+  try { localStorage.setItem('gastos_cache', JSON.stringify(state)); } catch(_) {}
+
+  // Debounce: espera 800ms de inactividad antes de escribir en Firestore
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const ref = userDocRef();
+    if (!ref || isSaving) return;
+    isSaving = true;
+    try {
+      await setDoc(ref, JSON.parse(JSON.stringify(state)));
+    } catch (err) {
+      console.error("[Firestore] Error al guardar:", err);
+      toast("No se pudo guardar en la nube", "error");
+    } finally {
+      isSaving = false;
+    }
+  }, 800);
+}
+
+/* ══════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════ */
 function makeExpense(name, amount, date, notes, color, type) {
   return {
     id:       crypto.randomUUID(),
     name, amount, date, notes, color,
-    type:     type || 'normal',   // 'normal' | 'quincenal'
+    type:     type || 'normal',
     included: true,
-    subs:     { 1: [], 2: [] },   // listas independientes Q1 / Q2
+    subs:     { 1: [], 2: [] },
   };
-}
-
-function save() {
-  localStorage.setItem('gastos_app_v3', JSON.stringify(state));
 }
 
 function monthKey(y, m) { return `${y}-${String(m).padStart(2,'0')}`; }
@@ -69,29 +110,29 @@ function currentKey()   { return monthKey(state.currentYear, state.currentMonth)
 function currentExpenses() { return state.months[currentKey()] || []; }
 function todayISO()     { return new Date().toISOString().split('T')[0]; }
 
-/* ══════════════════════════════════════════════════════
-   FORMATTING
-══════════════════════════════════════════════════════ */
 function fmt(n) { return '$' + Math.round(n).toLocaleString('es-CO'); }
-
 function fmtInput(val) {
   const num = val.replace(/\D/g,'');
   return num ? parseInt(num).toLocaleString('es-CO') : '';
 }
-
 function parseAmount(str) { return parseInt(str.replace(/\D/g,'')) || 0; }
 
+function mutate(id, fn) {
+  const key = currentKey();
+  state.months[key] = state.months[key].map(e => e.id === id ? fn(e) : e);
+}
+
 /* ══════════════════════════════════════════════════════
-   RENDER PRINCIPAL
+   RENDER
 ══════════════════════════════════════════════════════ */
-function render() {
+export function render() {
   renderMonthNav();
   renderSalary();
   renderStats();
   renderFeed();
   if (activePanelId) renderSubPanel(activePanelId);
   save();
-  lucide.createIcons(); // re-hidrata iconos generados por JS
+  lucide.createIcons();
 }
 
 function renderMonthNav() {
@@ -112,8 +153,8 @@ function renderStats() {
   const left     = salary - spent;
   const pct      = salary > 0 ? Math.min(Math.round(spent / salary * 100), 100) : 0;
 
-  document.getElementById('stat-spent').textContent = fmt(spent);
-  document.getElementById('stat-pct').textContent   = pct + '%';
+  document.getElementById('stat-spent').textContent    = fmt(spent);
+  document.getElementById('stat-pct').textContent      = pct + '%';
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('prog-label-pct').textContent = pct + '%';
 
@@ -155,12 +196,12 @@ function buildItem(exp, idx) {
     ? new Date(exp.date + 'T00:00:00').toLocaleDateString('es-CO', {day:'numeric',month:'short',year:'numeric'})
     : '–';
 
-  // sub-indicator: suma de ambas quincenas
-  const subs1    = (exp.subs?.[1] || []);
-  const subs2    = (exp.subs?.[2] || []);
-  const allSubs  = [...subs1, ...subs2];
+  const subs1   = (exp.subs?.[1] || []);
+  const subs2   = (exp.subs?.[2] || []);
+  const allSubs = [...subs1, ...subs2];
   const subCount = allSubs.length;
   const subUsed  = allSubs.filter(s => s.included).reduce((a,s) => a + s.amount, 0);
+
   const subIndicatorHTML = subCount > 0
     ? `<div class="sub-indicator">
          <i data-lucide="layers"></i>
@@ -172,7 +213,6 @@ function buildItem(exp, idx) {
     ? `<span class="quincenal-badge"><i data-lucide="calendar-range"></i>Quincenal</span>`
     : '';
 
-  // type selector para el detalle editable
   const detailTypeSelector = `
     <div class="detail-type-selector">
       <button class="type-btn ${exp.type==='normal'?'active':''}" data-type="normal" data-action="change-type">
@@ -240,12 +280,10 @@ function buildItem(exp, idx) {
       </div>
     </div>`;
 
-  // format amount on focus/blur
   const amtInp = wrap.querySelector('[data-field="amount"]');
   amtInp.addEventListener('focus', () => { amtInp.value = amtInp.value.replace(/\D/g,''); });
   amtInp.addEventListener('blur',  () => { amtInp.value = fmtInput(amtInp.value); });
 
-  // type buttons inside detail
   wrap.querySelectorAll('[data-action="change-type"]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
@@ -254,24 +292,14 @@ function buildItem(exp, idx) {
     });
   });
 
-  // click delegation
   wrap.addEventListener('click', e => {
     const action = e.target.closest('[data-action]')?.dataset.action;
     if (!action || action === 'change-type') return;
-
-    if (action === 'toggle') {
-      toggleIncluded(exp.id);
-    } else if (action === 'expand') {
-      const det = wrap.querySelector('.item-detail');
-      det.classList.toggle('open');
-    } else if (action === 'open-subs') {
-      e.stopPropagation();
-      openSubPanel(exp.id);
-    } else if (action === 'save') {
-      saveItem(wrap, exp.id);
-    } else if (action === 'delete') {
-      deleteItem(exp.id);
-    }
+    if (action === 'toggle')     toggleIncluded(exp.id);
+    if (action === 'expand')     wrap.querySelector('.item-detail').classList.toggle('open');
+    if (action === 'open-subs')  { e.stopPropagation(); openSubPanel(exp.id); }
+    if (action === 'save')       saveItem(wrap, exp.id);
+    if (action === 'delete')     deleteItem(exp.id);
   });
 
   return wrap;
@@ -295,7 +323,6 @@ function saveItem(wrap, id) {
   const type   = typeEl ? typeEl.dataset.type : 'normal';
 
   if (!name || !amount) { toast('Nombre y monto son obligatorios', 'error'); return; }
-
   mutate(id, e => ({ ...e, name, amount, date, notes, color, type }));
   toast('Cambios guardados', 'success');
   render();
@@ -312,39 +339,25 @@ function deleteItem(id) {
 function addExpense(name, amount, date, notes, type) {
   const key = currentKey();
   if (!state.months[key]) state.months[key] = [];
-
   const usedColors = state.months[key].map(e => e.color);
   const color = COLORS.find(c => !usedColors.includes(c)) || COLORS[state.months[key].length % COLORS.length];
-
   state.months[key].push(makeExpense(name, amount, date, notes, color, type));
   render();
 }
 
-/* Mutación inmutable de un gasto por ID */
-function mutate(id, fn) {
-  const key = currentKey();
-  state.months[key] = state.months[key].map(e => e.id === id ? fn(e) : e);
-}
-
 /* ══════════════════════════════════════════════════════
-   SUBGASTOS — PANEL LATERAL
+   SUBGASTOS
 ══════════════════════════════════════════════════════ */
 function getParent(id) { return currentExpenses().find(e => e.id === id); }
 
 function openSubPanel(parentId) {
   activePanelId = parentId;
   const parent  = getParent(parentId);
-  activePanelQ  = 1; // siempre empieza en Q1
+  activePanelQ  = 1;
 
-  // mostrar u ocultar toggle según tipo
   const toggleWrap = document.getElementById('quincenal-toggle-wrap');
-  if (parent.type === 'quincenal') {
-    toggleWrap.classList.add('visible');
-  } else {
-    toggleWrap.classList.remove('visible');
-  }
+  toggleWrap.classList.toggle('visible', parent.type === 'quincenal');
 
-  // resetear botones Q
   document.querySelectorAll('.q-btn').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.q) === 1);
   });
@@ -366,43 +379,32 @@ function renderSubPanel(parentId) {
   const parent = getParent(parentId);
   if (!parent) return;
 
-  // Presupuesto: si es quincenal, dividir a la mitad por quincena
   const fullBudget = parent.amount;
   const budget     = parent.type === 'quincenal' ? Math.floor(fullBudget / 2) : fullBudget;
+  const subsKey    = parent.type === 'quincenal' ? activePanelQ : 1;
+  const subs       = (parent.subs?.[subsKey] || []);
+  const used       = subs.filter(s => s.included).reduce((a,s) => a + s.amount, 0);
+  const avail      = budget - used;
+  const pct        = budget > 0 ? Math.min(Math.round(used / budget * 100), 100) : 0;
 
-  // subs de la quincena activa (o la única lista si es normal)
-  const subsKey = parent.type === 'quincenal' ? activePanelQ : 1;
-  const subs    = (parent.subs?.[subsKey] || []);
-
-  const used  = subs.filter(s => s.included).reduce((a,s) => a + s.amount, 0);
-  const avail = budget - used;
-  const pct   = budget > 0 ? Math.min(Math.round(used / budget * 100), 100) : 0;
-
-  // header
-  document.getElementById('subpanel-title').textContent  = parent.name;
+  document.getElementById('subpanel-title').textContent = parent.name;
   const budgetLabel = parent.type === 'quincenal'
     ? `Presupuesto: ${fmt(budget)} / quincena (total ${fmt(fullBudget)})`
     : `Presupuesto: ${fmt(budget)}`;
-  document.getElementById('subpanel-budget').textContent = budgetLabel;
+  document.getElementById('subpanel-budget').textContent   = budgetLabel;
   document.getElementById('subpanel-dot').style.background = parent.color;
 
-  // progress bar
   const fill = document.getElementById('subpanel-progress-fill');
-  fill.style.width  = pct + '%';
-  fill.className    = 'subpanel-progress-fill';
+  fill.style.width = pct + '%';
+  fill.className   = 'subpanel-progress-fill';
   if (pct >= 100)   fill.classList.add('danger');
   else if (pct >= 80) fill.classList.add('warn');
 
   document.getElementById('subpanel-used-label').textContent = `Usado: ${fmt(used)}`;
   const leftLabel = document.getElementById('subpanel-left-label');
   leftLabel.textContent = `Disponible: ${fmt(avail)}`;
-  leftLabel.style.color = avail < 0
-    ? 'var(--danger)'
-    : avail < budget * 0.1
-      ? 'var(--warning)'
-      : 'var(--success)';
+  leftLabel.style.color = avail < 0 ? 'var(--danger)' : avail < budget * 0.1 ? 'var(--warning)' : 'var(--success)';
 
-  // feed
   const feed = document.getElementById('subpanel-feed');
   if (!subs.length) {
     feed.innerHTML = `
@@ -414,7 +416,6 @@ function renderSubPanel(parentId) {
     feed.innerHTML = '';
     subs.forEach((sub, i) => feed.appendChild(buildSubItem(sub, parentId, i)));
   }
-
   lucide.createIcons();
 }
 
@@ -423,7 +424,6 @@ function buildSubItem(sub, parentId, idx) {
   wrap.className = 'sub-item' + (sub.included ? '' : ' excluded');
   wrap.dataset.id = sub.id;
   wrap.style.animationDelay = `${idx * 0.03}s`;
-
   wrap.innerHTML = `
     <div class="item-check ${sub.included?'checked':''}" data-action="sub-toggle"></div>
     <div class="sub-item-info">
@@ -434,33 +434,24 @@ function buildSubItem(sub, parentId, idx) {
     <button class="sub-item-delete" data-action="sub-delete" title="Eliminar">
       <i data-lucide="x"></i>
     </button>`;
-
   wrap.addEventListener('click', e => {
     const action = e.target.closest('[data-action]')?.dataset.action;
     if (!action) return;
     if (action === 'sub-toggle') toggleSubIncluded(parentId, sub.id);
     if (action === 'sub-delete') deleteSub(parentId, sub.id);
   });
-
   return wrap;
 }
 
-/* ──────────────────────────────────────────────────────
-   ACCIONES DE SUBGASTOS
-────────────────────────────────────────────────────── */
 function getSubsKey(parentId) {
-  const parent = getParent(parentId);
-  return parent?.type === 'quincenal' ? activePanelQ : 1;
+  return getParent(parentId)?.type === 'quincenal' ? activePanelQ : 1;
 }
 
 function toggleSubIncluded(parentId, subId) {
   const qKey = getSubsKey(parentId);
   mutate(parentId, e => ({
     ...e,
-    subs: {
-      ...e.subs,
-      [qKey]: e.subs[qKey].map(s => s.id === subId ? { ...s, included: !s.included } : s),
-    },
+    subs: { ...e.subs, [qKey]: e.subs[qKey].map(s => s.id === subId ? { ...s, included: !s.included } : s) },
   }));
   render();
 }
@@ -469,10 +460,7 @@ function deleteSub(parentId, subId) {
   const qKey = getSubsKey(parentId);
   mutate(parentId, e => ({
     ...e,
-    subs: {
-      ...e.subs,
-      [qKey]: e.subs[qKey].filter(s => s.id !== subId),
-    },
+    subs: { ...e.subs, [qKey]: e.subs[qKey].filter(s => s.id !== subId) },
   }));
   toast('Subgasto eliminado');
   render();
@@ -481,30 +469,19 @@ function deleteSub(parentId, subId) {
 function addSub(parentId, name, amount, notes) {
   const parent = getParent(parentId);
   if (!parent) return;
-
-  const budget  = parent.type === 'quincenal' ? Math.floor(parent.amount / 2) : parent.amount;
-  const qKey    = getSubsKey(parentId);
-  const subs    = parent.subs?.[qKey] || [];
-  const used    = subs.filter(s => s.included).reduce((a,s) => a + s.amount, 0);
+  const budget = parent.type === 'quincenal' ? Math.floor(parent.amount / 2) : parent.amount;
+  const qKey   = getSubsKey(parentId);
+  const subs   = parent.subs?.[qKey] || [];
+  const used   = subs.filter(s => s.included).reduce((a,s) => a + s.amount, 0);
 
   if (used + amount > budget) {
-    const over = fmt(used + amount - budget);
-    toast(`Se excede el presupuesto por ${over}`, 'error');
+    toast(`Se excede el presupuesto por ${fmt(used + amount - budget)}`, 'error');
     return;
   }
-
   mutate(parentId, e => ({
     ...e,
-    subs: {
-      ...e.subs,
-      [qKey]: [...(e.subs[qKey] || []), {
-        id:       crypto.randomUUID(),
-        name, amount, notes,
-        included: true,
-      }],
-    },
+    subs: { ...e.subs, [qKey]: [...(e.subs[qKey] || []), { id: crypto.randomUUID(), name, amount, notes, included: true }] },
   }));
-
   toast('Subgasto agregado', 'success');
   render();
   clearSubForm();
@@ -518,38 +495,29 @@ function clearSubForm() {
 }
 
 /* ══════════════════════════════════════════════════════
-   MONTH NAV
+   EVENTOS — MONTH NAV
 ══════════════════════════════════════════════════════ */
 document.getElementById('prev-month').addEventListener('click', () => {
   state.currentMonth--;
   if (state.currentMonth < 0) { state.currentMonth = 11; state.currentYear--; }
-  closeSubPanel();
-  render();
+  closeSubPanel(); render();
 });
 document.getElementById('next-month').addEventListener('click', () => {
   state.currentMonth++;
   if (state.currentMonth > 11) { state.currentMonth = 0; state.currentYear++; }
-  closeSubPanel();
-  render();
+  closeSubPanel(); render();
 });
 
 /* ══════════════════════════════════════════════════════
-   SALARY
+   EVENTOS — SALARY
 ══════════════════════════════════════════════════════ */
 const salaryInput = document.getElementById('salary-input');
-salaryInput.addEventListener('focus', () => {
-  salaryInput.value = state.salary ? String(Math.round(state.salary)) : '';
-});
-salaryInput.addEventListener('input', () => {
-  salaryInput.value = fmtInput(salaryInput.value);
-});
-salaryInput.addEventListener('blur', () => {
-  state.salary = parseAmount(salaryInput.value);
-  render();
-});
+salaryInput.addEventListener('focus', () => { salaryInput.value = state.salary ? String(Math.round(state.salary)) : ''; });
+salaryInput.addEventListener('input', () => { salaryInput.value = fmtInput(salaryInput.value); });
+salaryInput.addEventListener('blur',  () => { state.salary = parseAmount(salaryInput.value); render(); });
 
 /* ══════════════════════════════════════════════════════
-   MODAL — NUEVO GASTO
+   EVENTOS — MODAL NUEVO GASTO
 ══════════════════════════════════════════════════════ */
 const overlay = document.getElementById('modal-overlay');
 
@@ -559,7 +527,6 @@ function openModal() {
   document.getElementById('m-amount').value = '';
   document.getElementById('m-date').value   = todayISO();
   document.getElementById('m-notes').value  = '';
-  // reset type selector
   document.querySelectorAll('#m-type-selector .type-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.type === 'normal');
   });
@@ -574,7 +541,6 @@ document.getElementById('close-modal').addEventListener('click', closeModal);
 document.getElementById('close-modal-2').addEventListener('click', closeModal);
 overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
 
-// type selector en modal
 document.querySelectorAll('#m-type-selector .type-btn').forEach(btn => {
   btn.addEventListener('click', e => {
     e.stopPropagation();
@@ -584,7 +550,6 @@ document.querySelectorAll('#m-type-selector .type-btn').forEach(btn => {
   });
 });
 
-// format modal amount
 const mAmount = document.getElementById('m-amount');
 mAmount.addEventListener('focus', () => { mAmount.value = mAmount.value.replace(/\D/g,''); });
 mAmount.addEventListener('input', () => { mAmount.value = fmtInput(mAmount.value); });
@@ -594,28 +559,23 @@ document.getElementById('save-expense').addEventListener('click', () => {
   const amount = parseAmount(document.getElementById('m-amount').value);
   const date   = document.getElementById('m-date').value || todayISO();
   const notes  = document.getElementById('m-notes').value.trim();
-
-  if (!name)   { toast('Escribe un nombre', 'error');  return; }
-  if (!amount) { toast('Escribe un monto',  'error');  return; }
-
+  if (!name)   { toast('Escribe un nombre', 'error'); return; }
+  if (!amount) { toast('Escribe un monto', 'error');  return; }
   addExpense(name, amount, date, notes, modalType);
   closeModal();
   toast('Gasto agregado', 'success');
 });
 
 document.querySelectorAll('#modal-overlay input').forEach(inp => {
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('save-expense').click();
-  });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('save-expense').click(); });
 });
 
 /* ══════════════════════════════════════════════════════
-   PANEL LATERAL — EVENTOS
+   EVENTOS — SUBPANEL
 ══════════════════════════════════════════════════════ */
 document.getElementById('subpanel-close').addEventListener('click', closeSubPanel);
 document.getElementById('subpanel-overlay').addEventListener('click', closeSubPanel);
 
-// Toggle Q1 / Q2
 document.querySelectorAll('.q-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const q = parseInt(btn.dataset.q);
@@ -627,15 +587,10 @@ document.querySelectorAll('.q-btn').forEach(btn => {
   });
 });
 
-// Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (activePanelId) closeSubPanel();
-    else closeModal();
-  }
+  if (e.key === 'Escape') { if (activePanelId) closeSubPanel(); else closeModal(); }
 });
 
-// format sub-amount
 const subAmountInp = document.getElementById('sub-amount');
 subAmountInp.addEventListener('focus', () => { subAmountInp.value = subAmountInp.value.replace(/\D/g,''); });
 subAmountInp.addEventListener('input', () => { subAmountInp.value = fmtInput(subAmountInp.value); });
@@ -645,12 +600,11 @@ document.getElementById('sub-save').addEventListener('click', () => {
   const name   = document.getElementById('sub-name').value.trim();
   const amount = parseAmount(document.getElementById('sub-amount').value);
   const notes  = document.getElementById('sub-notes').value.trim();
-  if (!name)   { toast('Escribe un nombre', 'error');  return; }
-  if (!amount) { toast('Escribe un monto',  'error');  return; }
+  if (!name)   { toast('Escribe un nombre', 'error'); return; }
+  if (!amount) { toast('Escribe un monto', 'error');  return; }
   addSub(activePanelId, name, amount, notes);
 });
 
-// Enter en formulario sub
 ['sub-name','sub-amount','sub-notes'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('sub-save').click();
@@ -661,44 +615,37 @@ document.getElementById('sub-save').addEventListener('click', () => {
    TOAST
 ══════════════════════════════════════════════════════ */
 let toastTimer;
-function toast(msg, type = 'info') {
-  const el      = document.getElementById('toast');
-  const msgEl   = document.getElementById('toast-msg');
-  const iconEl  = document.getElementById('toast-icon');
-
+export function toast(msg, type = 'info') {
+  const el     = document.getElementById('toast');
+  const msgEl  = document.getElementById('toast-msg');
+  const iconEl = document.getElementById('toast-icon');
   msgEl.textContent = msg;
   el.className = '';
-
   const iconMap = { success: 'check-circle', error: 'alert-circle', info: 'info' };
   iconEl.setAttribute('data-lucide', iconMap[type] || 'info');
   lucide.createIcons({ nodes: [iconEl] });
-
   if (type === 'error')   el.classList.add('toast-error');
   if (type === 'success') el.classList.add('toast-success');
   el.classList.add('show');
-
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
 }
 
 /* ══════════════════════════════════════════════════════
-   VANTA
+   VANTA BACKGROUND
 ══════════════════════════════════════════════════════ */
-VANTA.FOG({
-  el: '#vanta-bg',
-  mouseControls: true,
-  touchControls: true,
-  gyroControls: false,
-  minHeight: 200.00,
-  minWidth: 200.00,
-  highlightColor: 0x4d079d,
-  midtoneColor: 0x2c2440,
-  lowlightColor: 0x3d016d,
-  baseColor: 0x101010,
-  speed: 2.20,
-});
-
-/* ══════════════════════════════════════════════════════
-   INIT
-══════════════════════════════════════════════════════ */
-render();
+export function initVanta() {
+  VANTA.FOG({
+    el: '#vanta-bg',
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    minHeight: 200,
+    minWidth: 200,
+    highlightColor: 0x384D95,
+    midtoneColor:   0x182250,
+    lowlightColor:  0x8a1f4f,
+    baseColor:      0x08091a,
+    speed: 1.80,
+  });
+}
