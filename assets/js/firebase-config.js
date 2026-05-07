@@ -1,9 +1,3 @@
-/* ══════════════════════════════════════════════════════
-   FIREBASE CONFIG
-   ► Reemplaza estos valores con los de tu proyecto Firebase
-   ► Guía de configuración al final del README
-══════════════════════════════════════════════════════ */
-
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBWxOtOxy3Tn3vUL9OkmlINYhoPG8moLNI",
     authDomain: "finza-b2a7d.firebaseapp.com",
