@@ -960,10 +960,6 @@ header {
 
 /* ─── FAB ────────────────────────────────────────────── */
 .fab {
-  position: fixed;
-  bottom: 28px;
-  right: calc(50% - min(350px, 50vw) + 16px);
-  z-index: 50;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -981,7 +977,6 @@ header {
     0 0 0 1px rgba(255,255,255,0.10) inset;
   letter-spacing: 0.02em;
   transition: var(--trans);
-  bottom: calc(28px + var(--safe-bottom));
 }
 .fab i { font-size: 1rem; }
 .fab:hover {
@@ -989,13 +984,6 @@ header {
   box-shadow: 0 14px 40px rgba(230,62,136,0.60);
 }
 .fab:active { transform: scale(0.97); }
-
-@media (max-width: 720px) {
-  .fab {
-    right: 16px;
-    bottom: calc(20px + var(--safe-bottom));
-  }
-}
 
 @media (max-width: 360px) {
   .fab-label { display: none; }
@@ -2332,4 +2320,455 @@ header {
   letter-spacing: 0.07em;
   color: var(--rose-light);
   margin-bottom: 12px;
+}
+
+
+/* ══════════════════════════════════════════════════════
+   COLOR PICKER EN MODAL DE NUEVO GASTO
+══════════════════════════════════════════════════════ */
+.form-field-color { flex: 0 0 90px; }
+
+.color-input-wrap {
+  position: relative;
+  width: 100%;
+  height: 42px;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: var(--trans-fast);
+}
+.color-input-wrap:hover { border-color: rgba(230,62,136,0.45); }
+
+.color-preview {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transition: background 0.2s ease;
+  pointer-events: none;
+}
+
+.color-input-wrap input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+/* ══════════════════════════════════════════════════════
+   SUBGASTO EN EDICIÓN INLINE
+══════════════════════════════════════════════════════ */
+.sub-item.sub-editing {
+  background: rgba(230,62,136,0.06);
+  border-color: rgba(230,62,136,0.30);
+}
+
+.sub-edit-form { padding: 4px 2px; }
+
+.sub-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sub-edit-form .form-field label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.sub-edit-form .form-field input {
+  width: 100%;
+  background: rgba(56,77,149,0.07);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xs);
+  color: var(--text);
+  font-family: "Karla", sans-serif;
+  font-size: 0.83rem;
+  padding: 8px 10px;
+  outline: none;
+  transition: var(--trans-fast);
+  -webkit-appearance: none;
+}
+.sub-edit-form .form-field input:focus {
+  border-color: rgba(230,62,136,0.50);
+  background: rgba(230,62,136,0.06);
+  box-shadow: 0 0 0 3px rgba(230,62,136,0.10);
+}
+
+.sub-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.sub-edit-cancel { font-size: 0.78rem; padding: 7px 12px; }
+.sub-edit-save   { font-size: 0.78rem; padding: 7px 12px; }
+
+/* Botón editar en sub-item normal */
+.sub-item-edit {
+  background: none;
+  border: none;
+  color: rgba(56,77,149,0.55);
+  cursor: pointer;
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  transition: var(--trans-fast);
+  flex-shrink: 0;
+}
+.sub-item-edit:hover {
+  color: var(--tide-light);
+  background: rgba(56,77,149,0.15);
+}
+
+/* Acciones del form de subgasto */
+.sub-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 9px;
+}
+.sub-form-actions .subpanel-save-btn { flex: 1; justify-content: center; margin-top: 0; }
+.sub-form-actions .btn-cancel { font-size: 0.82rem; }
+
+/* ══════════════════════════════════════════════════════
+   TAB TOGGLE — PLANTILLAS / CONJUNTOS
+══════════════════════════════════════════════════════ */
+.tpl-tab-bar {
+  display: flex;
+  background: rgba(56,77,149,0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 50px;
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.tpl-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: "Karla", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 50px;
+  transition: var(--trans-fast);
+}
+.tpl-tab i { font-size: 0.85rem; }
+.tpl-tab:hover { color: var(--text); }
+.tpl-tab.active {
+  background: linear-gradient(135deg, var(--tide), var(--rose));
+  color: #fff;
+  box-shadow: 0 2px 14px rgba(230,62,136,0.38);
+}
+
+.tpl-tab-content { animation: fadeUp 0.25s ease both; }
+
+/* ══════════════════════════════════════════════════════
+   PLANTILLAS DE CONJUNTO (BUNDLES)
+══════════════════════════════════════════════════════ */
+#bundle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+.bundle-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 13px;
+  transition: var(--trans-fast);
+  animation: fadeUp 0.3s ease both;
+}
+.bundle-item:hover {
+  background: var(--glass-hover);
+  border-color: rgba(230,62,136,0.30);
+}
+
+.bundle-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--tide), var(--tide-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 3px 12px rgba(56,77,149,0.30);
+}
+
+.bundle-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bundle-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bundle-meta {
+  font-size: 0.70rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bundle-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(56,77,149,0.10);
+  border: 1px solid rgba(56,77,149,0.22);
+  border-radius: 20px;
+  padding: 1px 7px;
+  font-size: 0.65rem;
+  color: var(--tide-light);
+  font-weight: 600;
+}
+.bundle-meta-badge i { font-size: 0.65rem; }
+
+.bundle-total {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--rose-light);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bundle-apply-btn,
+.bundle-del-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95rem;
+  transition: var(--trans-fast);
+  flex-shrink: 0;
+}
+.bundle-apply-btn {
+  color: var(--success);
+}
+.bundle-apply-btn:hover {
+  background: var(--success-bg);
+  color: #fff;
+}
+.bundle-del-btn {
+  color: rgba(248,113,113,0.45);
+}
+.bundle-del-btn:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* Botón guardar mes actual */
+.bundle-save-month-btn {
+  width: 100%;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+/* Formulario nombre del conjunto */
+.bundle-form-wrap {
+  border: 1px solid rgba(56,77,149,0.25);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-top: 12px;
+  background: rgba(56,77,149,0.04);
+  animation: fadeUp 0.25s ease both;
+}
+.bundle-form-wrap.hidden { display: none; }
+
+/* ── Sugerencia en empty state ────────────────────────── */
+.empty-bundles-suggestion {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--glass-border);
+  animation: fadeUp 0.5s 0.2s ease both;
+}
+.empty-bundles-suggestion p {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.empty-bundles-suggestion strong {
+  color: var(--tide-light);
+}
+
+.bundle-suggest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.bundle-suggest-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--glass);
+  border: 1px solid rgba(56,77,149,0.22);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: var(--trans-fast);
+  font-family: "Karla", sans-serif;
+}
+.bundle-suggest-chip:hover {
+  background: rgba(56,77,149,0.10);
+  border-color: rgba(56,77,149,0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(56,77,149,0.20);
+}
+
+.bundle-suggest-chip .bundle-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.bundle-suggest-info {
+  flex: 1;
+  min-width: 0;
+}
+.bundle-suggest-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.bundle-suggest-meta {
+  font-size: 0.67rem;
+  color: var(--muted);
+}
+
+.bundle-suggest-apply {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bundle-suggest-apply i { font-size: 0.78rem; }
+
+/* ══════════════════════════════════════════════════════
+   MODAL CAMBIO DE TEMA
+══════════════════════════════════════════════════════ */
+.theme-confirm-modal {
+  text-align: center;
+  max-width: 380px;
+  padding: 32px 28px 28px;
+}
+
+.theme-confirm-modal::before { display: none; }
+
+.theme-confirm-icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--tide), var(--rose));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: #fff;
+  margin: 0 auto 20px;
+  box-shadow: 0 8px 28px rgba(230,62,136,0.35);
+  animation: theme-icon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes theme-icon-pulse {
+  0%, 100% { box-shadow: 0 8px 28px rgba(230,62,136,0.35); }
+  50%      { box-shadow: 0 8px 36px rgba(230,62,136,0.55), 0 0 0 8px rgba(230,62,136,0.08); }
+}
+
+.theme-confirm-modal h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--text), var(--rose-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.theme-confirm-modal p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.theme-confirm-actions {
+  justify-content: center;
+  margin-top: 24px;
+}
+
+/* Modo claro extras para nuevos componentes */
+:root.light-mode .tpl-tab-bar {
+  background: rgba(255,255,255,0.65);
+  border-color: rgba(56,77,149,0.18);
+}
+
+:root.light-mode .bundle-item {
+  background: rgba(255,255,255,0.80);
+  border-color: rgba(56,77,149,0.15);
+}
+:root.light-mode .bundle-item:hover {
+  background: rgba(255,255,255,0.96);
+}
+
+:root.light-mode .bundle-suggest-chip {
+  background: rgba(255,255,255,0.75);
+  border-color: rgba(56,77,149,0.18);
+}
+:root.light-mode .bundle-suggest-chip:hover {
+  background: rgba(255,255,255,0.95);
+}
+
+:root.light-mode .bundle-form-wrap {
+  background: rgba(255,255,255,0.70);
+  border-color: rgba(56,77,149,0.18);
+}
+
+:root.light-mode .theme-confirm-modal {
+  background: rgba(250,249,253,0.98);
+}
+
+:root.light-mode .modal-overlay#theme-modal-overlay {
+  background: rgba(245,244,248,0.82);
 }

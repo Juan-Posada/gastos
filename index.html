@@ -1,69 +1,45 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#09050f" />
+  <meta name="theme-color" content="#08091a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>finZa</title>
-
-  <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
   <link rel="stylesheet" href="assets/css/master.css" />
-  <link rel="shortcut icon" href="assets/images/favicon.png" type="image/x-icon" />
-
-  <!-- Librerías externas -->
+  <link rel="icon" type="image/png" href="assets/images/favicon.png?v=3" />
+  <link rel="apple-touch-icon" href="assets/images/favicon.png?v=3" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vanta/dist/vanta.fog.min.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
-
 <body>
 
   <div id="vanta-bg"></div>
 
-  <!-- ════════════════════════════════════════
-       LOADING OVERLAY
-  ════════════════════════════════════════ -->
   <div id="loading-overlay">
     <div class="loader-ring"></div>
     <p class="loader-text">Cargando tus datos…</p>
   </div>
 
-  <!-- ════════════════════════════════════════
-       PANTALLA DE LOGIN
-  ════════════════════════════════════════ -->
+  <!-- ════ LOGIN ════ -->
   <div id="login-screen">
     <div class="login-card">
-
       <div class="login-logo">
-        <div class="login-logo-icon">
-          <i data-lucide="wallet"></i>
+        <div class="login-logo-icon" style="background:none; box-shadow:none;">
+          <img src="assets/images/logo.png" alt="finZa Logo" style="width:100%; height:100%; object-fit:contain; border-radius:inherit;" />
         </div>
       </div>
-
       <h1 class="login-title">finZa</h1>
-      <p class="login-subtitle">Tu resumen financiero mensual, <br>siempre contigo. </p>
-
+      <p class="login-subtitle">Tu resumen financiero mensual,<br>siempre contigo.</p>
       <div class="login-features">
-        <div class="login-feature">
-          <i data-lucide="cloud"></i>
-          <span>Datos en la nube</span>
-        </div>
-        <div class="login-feature">
-          <i data-lucide="shield-check"></i>
-          <span>Acceso seguro</span>
-        </div>
-        <div class="login-feature">
-          <i data-lucide="smartphone"></i>
-          <span>En cualquier dispositivo</span>
-        </div>
+        <div class="login-feature"><i data-lucide="cloud"></i><span>Datos en la nube</span></div>
+        <div class="login-feature"><i data-lucide="shield-check"></i><span>Acceso seguro</span></div>
+        <div class="login-feature"><i data-lucide="smartphone"></i><span>En cualquier dispositivo</span></div>
       </div>
-
       <button id="btn-google-login" class="btn-google">
         <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -74,58 +50,51 @@
         <span>Continuar con Google</span>
         <div class="btn-spinner"></div>
       </button>
-
-      <p class="login-legal">
-        Al continuar aceptas que tus datos se almacenan de forma segura en Firebase.
-      </p>
-
+      <p class="login-legal">Al continuar aceptas que tus datos se almacenan de forma segura en Firebase.</p>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════
-       APP PRINCIPAL
-  ════════════════════════════════════════ -->
+  <!-- ════ APP ════ -->
   <div id="app" class="hidden">
-
     <header>
       <div class="header-left">
         <div class="header-brand">
-          <div class="brand-icon"><i data-lucide="wallet"></i></div>
+          <div class="brand-icon" style="background:none; box-shadow:none;">
+            <img src="assets/images/logo.png" alt="finZa Logo" style="width:100%; height:100%; object-fit:contain; border-radius:inherit;" />
+          </div>
           <div>
             <h1>Mis Gastos</h1>
             <p id="subtitle">Resumen mensual</p>
           </div>
         </div>
       </div>
-
       <div class="header-right">
         <nav class="month-nav">
           <button id="prev-month" title="Mes anterior"><i data-lucide="chevron-left"></i></button>
           <span id="month-label">–</span>
           <button id="next-month" title="Mes siguiente"><i data-lucide="chevron-right"></i></button>
         </nav>
-
+        <button id="btn-theme" class="btn-icon-header" title="Cambiar tema">
+          <i data-lucide="sun"></i>
+        </button>
         <div class="user-menu">
           <div class="user-avatar" id="user-avatar"></div>
           <div class="user-dropdown">
             <span id="user-name" class="user-name-label"></span>
             <button id="btn-signout" class="btn-signout-mini">
-              <i data-lucide="log-out"></i>
-              Cerrar sesión
+              <i data-lucide="log-out"></i> Cerrar sesión
             </button>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- Sueldo -->
     <div class="salary-row">
       <i data-lucide="banknote" class="salary-icon"></i>
       <label>Sueldo mensual</label>
       <input type="text" id="salary-input" inputmode="numeric" placeholder="0" />
     </div>
 
-    <!-- Stats -->
     <div class="stats">
       <div class="stat-card spent" style="animation-delay:0s">
         <div class="stat-card-inner">
@@ -150,7 +119,6 @@
       </div>
     </div>
 
-    <!-- Barra de progreso -->
     <div class="progress-wrap">
       <div class="progress-label">
         <span>Progreso del mes</span>
@@ -161,31 +129,40 @@
       </div>
     </div>
 
-    <!-- Feed -->
     <div class="feed-header">
       <h2>Gastos</h2>
       <span class="count-badge" id="feed-count">0</span>
     </div>
-
     <div id="feed"></div>
+  </div>
 
-  </div><!-- /#app -->
+  <!-- ════ FABs ════ -->
+  <div class="fab-group hidden" id="fab-group">
+    <button class="fab fab-secondary" id="open-templates" title="Plantillas">
+      <i data-lucide="bookmark"></i>
+      <span class="fab-label">Plantillas</span>
+    </button>
+    <button class="fab fab-primary" id="open-modal">
+      <i data-lucide="plus"></i>
+      <span class="fab-label">Nuevo gasto</span>
+    </button>
+  </div>
 
-  <!-- FAB -->
-  <button class="fab hidden" id="open-modal">
-    <i data-lucide="plus"></i>
-    <span class="fab-label">Nuevo gasto</span>
-  </button>
-
-  <!-- ════════════════════════════════════════
-       MODAL NUEVO GASTO
-  ════════════════════════════════════════ -->
+  <!-- ════ MODAL NUEVO GASTO ════ -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal">
       <div class="modal-header">
         <h3>Agregar gasto</h3>
         <button class="modal-x" id="close-modal"><i data-lucide="x"></i></button>
       </div>
+
+      <!-- Acceso rápido plantillas -->
+      <div class="modal-quick-wrap hidden" id="modal-quick-wrap">
+        <p class="modal-quick-label"><i data-lucide="zap"></i> Acceso rápido</p>
+        <div class="modal-quick-list" id="modal-quick-list"></div>
+      </div>
+
+      <!-- Nombre + Monto -->
       <div class="form-row">
         <div class="form-field">
           <label>Nombre</label>
@@ -196,43 +173,108 @@
           <input type="text" id="m-amount" placeholder="0" inputmode="numeric" />
         </div>
       </div>
-      <div class="form-field">
-        <label>Fecha</label>
-        <input type="date" id="m-date" />
+
+      <!-- Fecha + Color -->
+      <div class="form-row">
+        <div class="form-field">
+          <label>Fecha</label>
+          <input type="date" id="m-date" />
+        </div>
+        <div class="form-field form-field-color">
+          <label>Color</label>
+          <div class="color-input-wrap">
+            <div class="color-preview" id="m-color-preview"></div>
+            <input type="color" id="m-color" value="#E63E88" />
+          </div>
+        </div>
       </div>
+
+
+      <!-- Tipo -->
       <div class="form-field">
         <label>Tipo de gasto</label>
         <div class="type-selector" id="m-type-selector">
           <button class="type-btn active" data-type="normal">
-            <i data-lucide="circle-dot"></i>
-            Normal
+            <i data-lucide="circle-dot"></i> Normal
           </button>
           <button class="type-btn" data-type="quincenal">
-            <i data-lucide="calendar-range"></i>
-            Quincenal
+            <i data-lucide="calendar-range"></i> Quincenal
           </button>
         </div>
       </div>
+
+      <!-- Notas -->
       <div class="form-field">
         <label>Notas (opcional)</label>
         <textarea id="m-notes" rows="2" placeholder="Observaciones..."></textarea>
       </div>
+
       <div class="modal-actions">
         <button class="btn btn-cancel" id="close-modal-2">Cancelar</button>
         <button class="btn btn-save" id="save-expense">
-          <i data-lucide="check"></i>
-          Guardar
+          <i data-lucide="check"></i> Guardar
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════
-       PANEL LATERAL SUBGASTOS
-  ════════════════════════════════════════ -->
+  <!-- ════ MODAL PLANTILLAS ════ -->
+  <div class="modal-overlay" id="tpl-overlay">
+    <div class="modal tpl-modal">
+      <div class="modal-header">
+        <h3><i data-lucide="bookmark" style="font-size:1rem;opacity:.7;margin-right:6px"></i>Plantillas</h3>
+        <button class="modal-x" id="close-tpl"><i data-lucide="x"></i></button>
+      </div>
+
+      <!-- Tab toggle -->
+      <div class="tpl-tab-bar">
+        <button class="tpl-tab active" data-tab="individual"><i data-lucide="bookmark"></i> Individuales</button>
+        <button class="tpl-tab" data-tab="bundles"><i data-lucide="package"></i> Conjuntos</button>
+      </div>
+
+      <!-- ── TAB: Individuales ── -->
+      <div class="tpl-tab-content" id="tab-individual">
+        <p class="tpl-hint">Toca una plantilla para agregarla al mes actual. Guárdalas desde el ícono <i data-lucide="bookmark" style="font-size:.8rem"></i> de cada gasto.</p>
+        <div id="tpl-list"></div>
+        <div class="tpl-empty hidden" id="tpl-empty">
+          <i data-lucide="bookmark-x"></i>
+          <p>Aún no tienes plantillas.<br>Abre un gasto y toca <strong>Guardar como plantilla</strong>.</p>
+        </div>
+      </div>
+
+      <!-- ── TAB: Conjuntos ── -->
+      <div class="tpl-tab-content hidden" id="tab-bundles">
+        <p class="tpl-hint">Un conjunto guarda <strong>todos los gastos del mes</strong> (con subgastos). Ideal para meses recurrentes.</p>
+        <div id="bundle-list"></div>
+        <div class="tpl-empty hidden" id="bundle-empty">
+          <i data-lucide="package-x"></i>
+          <p>Sin conjuntos aún.<br>Guarda los gastos de un mes para reutilizarlos.</p>
+        </div>
+        <!-- Botón guardar mes actual -->
+        <button class="btn btn-save bundle-save-month-btn" id="btn-save-bundle">
+          <i data-lucide="save"></i> Guardar mes actual como conjunto
+        </button>
+        <!-- Formulario inline nombre -->
+        <div class="bundle-form-wrap hidden" id="bundle-form-wrap">
+          <div class="form-field">
+            <label>Nombre del conjunto</label>
+            <input type="text" id="bundle-fname" placeholder="Ej: Gastos Fijos" autocomplete="off" />
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-cancel" id="bundle-form-cancel">Cancelar</button>
+            <button class="btn btn-save" id="bundle-form-save">
+              <i data-lucide="check"></i> Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════ SUBPANEL ════ -->
   <div class="subpanel-overlay" id="subpanel-overlay"></div>
   <aside class="subpanel" id="subpanel">
-
     <div class="subpanel-header">
       <div class="subpanel-title-wrap">
         <div class="subpanel-dot" id="subpanel-dot"></div>
@@ -245,15 +287,9 @@
     </div>
 
     <div class="quincenal-toggle-wrap" id="quincenal-toggle-wrap">
-      <div class="quincenal-toggle" id="quincenal-toggle">
-        <button class="q-btn active" data-q="1">
-          <i data-lucide="calendar"></i>
-          1ª Quincena
-        </button>
-        <button class="q-btn" data-q="2">
-          <i data-lucide="calendar-check"></i>
-          2ª Quincena
-        </button>
+      <div class="quincenal-toggle">
+        <button class="q-btn active" data-q="1"><i data-lucide="calendar"></i> 1ª Quincena</button>
+        <button class="q-btn" data-q="2"><i data-lucide="calendar-check"></i> 2ª Quincena</button>
       </div>
     </div>
 
@@ -285,12 +321,33 @@
         <label>Notas (opcional)</label>
         <input type="text" id="sub-notes" placeholder="Observación..." autocomplete="off" />
       </div>
-      <button class="btn btn-save subpanel-save-btn" id="sub-save">
-        <i data-lucide="plus"></i>
-        Agregar
-      </button>
+      <div class="sub-form-actions">
+        <button class="btn btn-cancel hidden" id="sub-cancel">
+          <i data-lucide="x"></i> Cancelar
+        </button>
+        <button class="btn btn-save subpanel-save-btn" id="sub-save">
+          <i data-lucide="plus"></i> Agregar
+        </button>
+      </div>
     </div>
   </aside>
+
+  <!-- ════ MODAL CAMBIO DE TEMA ════ -->
+  <div class="modal-overlay" id="theme-modal-overlay">
+    <div class="modal theme-confirm-modal">
+      <div class="theme-confirm-icon" id="theme-confirm-icon">
+        <i data-lucide="sun"></i>
+      </div>
+      <h3 id="theme-confirm-title">¿Cambiar a modo claro?</h3>
+      <p id="theme-confirm-desc">La página se recargará para aplicar el nuevo tema visual.</p>
+      <div class="modal-actions theme-confirm-actions">
+        <button class="btn btn-cancel" id="theme-cancel">Cancelar</button>
+        <button class="btn btn-save" id="theme-confirm">
+          <i data-lucide="refresh-cw"></i> Cambiar y recargar
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- TOAST -->
   <div id="toast">
@@ -298,15 +355,11 @@
     <span id="toast-msg"></span>
   </div>
 
-  <!-- Scripts: type="module" para soporte de ES Modules -->
   <script type="module" src="assets/js/main.js"></script>
-
   <script>
-    // Inicializar lucide para elementos estáticos del login
     document.addEventListener('DOMContentLoaded', () => {
       if (typeof lucide !== 'undefined') lucide.createIcons();
     });
   </script>
-
 </body>
 </html>
