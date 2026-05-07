@@ -7,27 +7,27 @@ import { onAuthReady, signInWithGoogle, signOut } from "./auth.js";
 import { loadFromFirestore, render, toast, initVanta } from "./app.js";
 
 /* ── Elementos de UI ──────────────────────────────── */
-const loginScreen = document.getElementById('login-screen');
-const appScreen   = document.getElementById('app');
-const btnGoogle   = document.getElementById('btn-google-login');
-const btnSignOut  = document.getElementById('btn-signout');
-const userAvatar  = document.getElementById('user-avatar');
-const userName    = document.getElementById('user-name');
+const loginScreen    = document.getElementById('login-screen');
+const appScreen      = document.getElementById('app');
+const btnGoogle      = document.getElementById('btn-google-login');
+const btnSignOut     = document.getElementById('btn-signout');
+const userAvatar     = document.getElementById('user-avatar');
+const userName       = document.getElementById('user-name');
 const loadingOverlay = document.getElementById('loading-overlay');
+const fabGroup       = document.getElementById('fab-group');   // ← CORREGIDO
 
 /* ── Mostrar / ocultar pantallas ──────────────────── */
 function showLogin() {
   loginScreen.classList.remove('hidden');
   appScreen.classList.add('hidden');
-  document.querySelector('.fab')?.classList.add('hidden');
+  fabGroup?.classList.add('hidden');
 }
 
 function showApp(user) {
   loginScreen.classList.add('hidden');
   appScreen.classList.remove('hidden');
-  document.querySelector('.fab')?.classList.remove('hidden');
+  fabGroup?.classList.remove('hidden');
 
-  // Actualizar avatar y nombre
   if (userAvatar) {
     if (user.photoURL) {
       userAvatar.innerHTML = `<img src="${user.photoURL}" alt="avatar" />`;
@@ -53,7 +53,6 @@ onAuthReady(async (user) => {
       await loadFromFirestore();
       showApp(user);
       render();
-      // Inicializar Vanta solo una vez
       if (typeof VANTA !== 'undefined' && !window._vantaInit) {
         initVanta();
         window._vantaInit = true;
@@ -80,7 +79,6 @@ btnGoogle?.addEventListener('click', async () => {
       btnGoogle.disabled = false;
       btnGoogle.classList.remove('loading');
     }
-    // El observer onAuthReady maneja el resto
   } catch (err) {
     toast("No se pudo iniciar sesión", "error");
     btnGoogle.disabled = false;
@@ -91,5 +89,4 @@ btnGoogle?.addEventListener('click', async () => {
 /* ── Botón: Cerrar sesión ─────────────────────────── */
 btnSignOut?.addEventListener('click', async () => {
   await signOut();
-  // El observer onAuthReady detecta el logout y muestra login
 });
