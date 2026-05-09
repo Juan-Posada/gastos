@@ -143,11 +143,44 @@
     </div>
 
     <div class="feed-header">
-      <h2>Gastos</h2>
-      <span class="count-badge" id="feed-count">0</span>
-      <button class="btn-clear-all" id="btn-clear-all" title="Borrar todos los gastos del mes">
-        <i data-lucide="trash-2"></i>
-      </button>
+      <div class="feed-title-wrap">
+        <h2>Gastos</h2>
+        <span class="count-badge" id="feed-count">0</span>
+      </div>
+      <div class="feed-header-actions">
+        <button class="btn-icon-header" id="btn-toggle-search" title="Buscar gastos">
+          <i data-lucide="search"></i>
+        </button>
+        <button class="btn-clear-all" id="btn-clear-all" title="Borrar todos los gastos del mes">
+          <i data-lucide="trash-2"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Buscador -->
+    <div class="search-container hidden" id="search-container">
+      <div class="search-input-wrap">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="search-input" placeholder="Buscar por nombre o monto..." autocomplete="off" />
+        <button id="search-clear" class="search-clear-btn hidden"><i data-lucide="x"></i></button>
+      </div>
+      <div class="search-adv-toggle">
+        <button id="btn-adv-search" type="button">
+          Filtros avanzados <i data-lucide="chevron-down" id="adv-search-icon"></i>
+        </button>
+      </div>
+      <div class="search-adv-panel hidden" id="search-adv-panel">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Desde</label>
+            <input type="date" id="search-date-from" />
+          </div>
+          <div class="form-field">
+            <label>Hasta</label>
+            <input type="date" id="search-date-to" />
+          </div>
+        </div>
+      </div>
     </div>
     <div id="feed"></div>
   </div>

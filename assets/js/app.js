@@ -29,6 +29,10 @@ let isSaving       = false;
 let collapsedCats  = new Set();
 let dragSrcId      = null;
 
+let searchQuery    = "";
+let searchDateFrom = "";
+let searchDateTo   = "";
+
 let state = buildEmptyState();
 
 function buildEmptyState() {
@@ -498,17 +502,40 @@ function reorderExpense(oldIndex, newIndex) {
 
 function renderFeed() {
   const feed     = document.getElementById('feed');
-  const expenses = currentExpenses();
+  let expenses   = currentExpenses();
+  
+  // ── FILTROS DE BÚSQUEDA ──
+  const q = searchQuery.trim().toLowerCase();
+  if (q) {
+    expenses = expenses.filter(e => 
+      e.name.toLowerCase().includes(q) || 
+      e.amount.toString().includes(q) ||
+      (e.notes && e.notes.toLowerCase().includes(q))
+    );
+  }
+  if (searchDateFrom) expenses = expenses.filter(e => e.date >= searchDateFrom);
+  if (searchDateTo)   expenses = expenses.filter(e => e.date <= searchDateTo);
+
   document.getElementById('feed-count').textContent = expenses.length;
 
   if (!expenses.length) {
-    const suggestionHTML = buildBundleSuggestionHTML();
-    feed.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon"><i data-lucide="inbox"></i></div>
-        <p>Sin gastos este mes.<br>Presiona <strong>Nuevo gasto</strong> para comenzar.</p>
-        ${suggestionHTML}
-      </div>`;
+    const isSearching = q || searchDateFrom || searchDateTo;
+    if (isSearching) {
+      feed.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i data-lucide="search-x"></i></div>
+          <p>No se encontraron resultados para tu búsqueda.</p>
+          <button class="btn btn-cancel" style="margin-top:12px;" onclick="document.getElementById('search-clear').click()">Limpiar filtros</button>
+        </div>`;
+    } else {
+      const suggestionHTML = buildBundleSuggestionHTML();
+      feed.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i data-lucide="inbox"></i></div>
+          <p>Sin gastos este mes.<br>Presiona <strong>Nuevo gasto</strong> para comenzar.</p>
+          ${suggestionHTML}
+        </div>`;
+    }
     // Bind clicks en sugerencias de bundles
     feed.querySelectorAll('.bundle-suggest-chip').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -1171,6 +1198,49 @@ document.getElementById('sub-save').addEventListener('click', () => {
 /* ── DUPLICAR SUBGASTOS ─────────────────────────────── */
 document.getElementById('sub-duplicate-btn')?.addEventListener('click', () => {
   if (activePanelId) duplicateSubsToOtherQ(activePanelId);
+});
+
+/* ── BUSCADOR ───────────────────────────────────────── */
+document.getElementById('btn-toggle-search')?.addEventListener('click', () => {
+  const container = document.getElementById('search-container');
+  container.classList.toggle('hidden');
+  if (!container.classList.contains('hidden')) {
+    document.getElementById('search-input').focus();
+  }
+});
+
+let searchDebounce;
+function handleSearch() {
+  searchQuery    = document.getElementById('search-input').value;
+  searchDateFrom = document.getElementById('search-date-from').value;
+  searchDateTo   = document.getElementById('search-date-to').value;
+  
+  const hasFilter = searchQuery || searchDateFrom || searchDateTo;
+  document.getElementById('search-clear').classList.toggle('hidden', !hasFilter);
+  
+  renderFeed();
+}
+
+document.getElementById('search-input')?.addEventListener('input', () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(handleSearch, 300);
+});
+
+document.getElementById('search-date-from')?.addEventListener('change', handleSearch);
+document.getElementById('search-date-to')?.addEventListener('change', handleSearch);
+
+document.getElementById('search-clear')?.addEventListener('click', () => {
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-date-from').value = '';
+  document.getElementById('search-date-to').value = '';
+  handleSearch();
+});
+
+document.getElementById('btn-adv-search')?.addEventListener('click', () => {
+  const panel = document.getElementById('search-adv-panel');
+  const icon  = document.getElementById('adv-search-icon');
+  panel.classList.toggle('hidden');
+  icon.classList.toggle('open');
 });
 
 /* ── BORRAR TODOS ───────────────────────────────────── */
