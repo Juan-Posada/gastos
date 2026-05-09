@@ -26,6 +26,8 @@ let activePanelQ   = 1;
 let editingSubId   = null;   // subgasto en edición
 let modalType      = 'normal';
 let isSaving       = false;
+let collapsedCats  = new Set();
+let dragSrcId      = null;
 
 let state = buildEmptyState();
 
@@ -480,6 +482,48 @@ function renderStats() {
 }
 
 /* ── FEED ───────────────────────────────────────────── */
+function reorderExpense(srcId, targetId, before) {
+  const key  = currentKey();
+  const list = state.months[key] || [];
+  const si   = list.findIndex(e => e.id === srcId);
+  const ti   = list.findIndex(e => e.id === targetId);
+  if (si === -1 || ti === -1) return;
+
+  // Capturar posiciones ANTES del reorden (FLIP — First)
+  const feed = document.getElementById('feed');
+  const snapshots = new Map();
+  feed.querySelectorAll('.expense-item').forEach(el => {
+    snapshots.set(el.dataset.id, el.getBoundingClientRect().top);
+  });
+
+  const items = [...list];
+  const [moved] = items.splice(si, 1);
+  const newTi   = items.findIndex(e => e.id === targetId);
+  items.splice(before ? newTi : newTi + 1, 0, moved);
+  state.months[key] = items;
+  render();
+
+  // FLIP — Last & Invert & Play
+  requestAnimationFrame(() => {
+    feed.querySelectorAll('.expense-item').forEach(el => {
+      const prevTop = snapshots.get(el.dataset.id);
+      if (prevTop === undefined) return;
+      const currTop = el.getBoundingClientRect().top;
+      const dy = prevTop - currTop;
+      if (Math.abs(dy) < 2) return;
+      el.style.setProperty('--flip-dy', `${dy}px`);
+      el.classList.remove('flip-animate');
+      // Force reflow
+      void el.offsetWidth;
+      el.classList.add('flip-animate');
+      el.addEventListener('animationend', () => {
+        el.classList.remove('flip-animate');
+        el.style.removeProperty('--flip-dy');
+      }, { once: true });
+    });
+  });
+}
+
 function renderFeed() {
   const feed     = document.getElementById('feed');
   const expenses = currentExpenses();
@@ -525,33 +569,45 @@ function buildItem(exp, idx, indented) {
   const subUsed  = allSubs.filter(s => s.included).reduce((a,s) => a + s.amount, 0);
 
   const subIndicatorHTML = subCount > 0
-    ? `<div class="sub-indicator"><i data-lucide="layers"></i>${subCount} subgasto${subCount!==1?'s':''} · ${fmt(subUsed)}</div>`
-    : '';
-
-  const quincenalBadge = exp.type === 'quincenal'
-    ? `<span class="quincenal-badge"><i data-lucide="calendar-range"></i>Quincenal</span>` : '';
+    ? `<div class="sub-indicator"><i data-lucide="layers"></i><strong>${subCount} subgasto${subCount!==1?'s':''}</strong> · ${fmt(subUsed)}</div>`
+    : `<div class="sub-indicator sub-empty-hint"><i data-lucide="layers"></i>Sin subgastos</div>`;
 
   const isTpl = (state.templates || []).some(t => t.name === exp.name);
 
+  const isQuin = exp.type === 'quincenal';
+  const typeText = isQuin ? 'Quincenal' : 'Normal';
+  const typeIcon = isQuin ? 'calendar-range' : 'circle-dot';
+
   wrap.innerHTML = `
-    <div class="item-main">
-      <div class="item-check ${exp.included?'checked':''}" data-action="toggle"></div>
-      <div class="item-dot" style="background:${exp.color}"></div>
-      <div class="item-info">
-        <div class="name">${exp.name}</div>
-        <div class="date">${dateStr}</div>
-        ${subIndicatorHTML}
+    <div class="item-side-block" style="background:${exp.color}15; color:${exp.color}">
+      <div class="drag-handle" title="Arrastrar para reordenar"><i data-lucide="grip-vertical"></i></div>
+      <div class="item-side-text">
+        <i data-lucide="${typeIcon}"></i>
+        <span>${typeText}</span>
       </div>
-      ${quincenalBadge}
-      <div class="item-amount" style="color:${exp.color}">${fmt(exp.amount)}</div>
-      <button class="sub-btn" data-action="open-subs">
-        <i data-lucide="list"></i><span class="sub-btn-label"> Desglose</span>
-      </button>
-      <button class="expand-btn" data-action="expand" aria-label="Editar">
-        <i data-lucide="pencil"></i>
-      </button>
     </div>
-    <div class="item-detail">
+    <div class="item-content-col">
+      <div class="item-main">
+        <div class="item-check ${exp.included?'checked':''}" data-action="toggle"></div>
+        <div class="item-info">
+          <div class="name-row">
+            <span class="name">${exp.name}</span>
+            <span class="date-sep">|</span>
+            <span class="date">${dateStr}</span>
+          </div>
+          ${subIndicatorHTML}
+        </div>
+        <div class="item-amount" style="color:${exp.color}">${fmt(exp.amount)}</div>
+        <div class="item-actions">
+          <button class="sub-btn" data-action="open-subs">
+            <i data-lucide="list"></i><span class="sub-btn-label"> Desglose</span>
+          </button>
+          <button class="expand-btn" data-action="expand" aria-label="Editar">
+            <i data-lucide="pencil"></i>
+          </button>
+        </div>
+      </div>
+      <div class="item-detail">
       <div class="item-detail-inner">
         <div class="detail-fields">
           <div class="detail-field">
@@ -599,12 +655,44 @@ function buildItem(exp, idx, indented) {
           </button>
         </div>
       </div>
-    </div>`;
+    </div>
+  </div>`;
 
   const amtInp = wrap.querySelector('[data-field="amount"]');
   amtInp.addEventListener('focus', () => { amtInp.value = amtInp.value.replace(/\D/g,''); });
   amtInp.addEventListener('input', () => { amtInp.value = fmtInput(amtInp.value); });
   amtInp.addEventListener('blur',  () => { amtInp.value = fmtInput(amtInp.value); });
+
+  // ── DnD ──────────────────────────────────────────────
+  wrap.setAttribute('draggable', 'true');
+  wrap.addEventListener('dragstart', e => {
+    dragSrcId = exp.id;
+    setTimeout(() => wrap.classList.add('dragging'), 0);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  wrap.addEventListener('dragend', () => {
+    wrap.classList.remove('dragging');
+    document.querySelectorAll('.expense-item').forEach(el =>
+      el.classList.remove('drag-over-top','drag-over-bottom'));
+    dragSrcId = null;
+  });
+  wrap.addEventListener('dragover', e => {
+    if (!dragSrcId || dragSrcId === exp.id) return;
+    e.preventDefault();
+    document.querySelectorAll('.expense-item').forEach(el =>
+      el.classList.remove('drag-over-top','drag-over-bottom'));
+    const mid = wrap.getBoundingClientRect().top + wrap.getBoundingClientRect().height / 2;
+    wrap.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+  });
+  wrap.addEventListener('dragleave', () =>
+    wrap.classList.remove('drag-over-top','drag-over-bottom'));
+  wrap.addEventListener('drop', e => {
+    if (!dragSrcId || dragSrcId === exp.id) return;
+    e.preventDefault();
+    const mid    = wrap.getBoundingClientRect().top + wrap.getBoundingClientRect().height / 2;
+    reorderExpense(dragSrcId, exp.id, e.clientY < mid);
+    wrap.classList.remove('drag-over-top','drag-over-bottom');
+  });
 
   wrap.querySelectorAll('[data-action="change-type"]').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -740,6 +828,8 @@ function renderSubPanel(parentId) {
     feed.innerHTML = '';
     subs.forEach((sub, i) => feed.appendChild(buildSubItem(sub, parentId, i)));
   }
+
+  updateDuplicateBtn(parentId);
 
   // Actualizar label del botón guardar subgasto
   const saveBtn  = document.getElementById('sub-save');
@@ -899,6 +989,51 @@ function clearSubForm() {
 }
 
 /* ══════════════════════════════════════════════════════
+   DUPLICAR SUBGASTOS
+══════════════════════════════════════════════════════ */
+function duplicateSubsToOtherQ(parentId) {
+  const parent = getParent(parentId);
+  if (!parent || parent.type !== 'quincenal') return;
+  const fromQ = activePanelQ, toQ = fromQ === 1 ? 2 : 1;
+  const subs  = parent.subs?.[fromQ] || [];
+  if (!subs.length) { toast('No hay subgastos en esta quincena', 'error'); return; }
+  const budget   = Math.floor(parent.amount / 2);
+  const total    = subs.filter(s => s.included).reduce((a,s) => a + s.amount, 0);
+  const destUsed = (parent.subs?.[toQ] || []).filter(s => s.included).reduce((a,s) => a + s.amount, 0);
+  if (destUsed + total > budget) { toast('Se excedería el presupuesto de la otra quincena', 'error'); return; }
+  const copies = subs.map(s => ({ id: crypto.randomUUID(), name: s.name, amount: s.amount, notes: s.notes||'', included: s.included !== false }));
+  mutate(parentId, e => ({ ...e, subs: { ...e.subs, [toQ]: [...(e.subs[toQ]||[]), ...copies] } }));
+  toast(`${copies.length} subgasto${copies.length!==1?'s':''} copiado${copies.length!==1?'s':''} a la ${toQ===1?'1ª':'2ª'} quincena`, 'success');
+  render();
+}
+
+function updateDuplicateBtn(parentId) {
+  const btn = document.getElementById('sub-duplicate-btn');
+  if (!btn) return;
+  const parent = getParent(parentId);
+  if (!parent || parent.type !== 'quincenal') { btn.classList.add('hidden'); return; }
+  const has = (parent.subs?.[activePanelQ] || []).length > 0;
+  btn.classList.toggle('hidden', !has);
+  btn.querySelector('span').textContent = `Duplicar a la ${activePanelQ===1?'2ª':'1ª'} quincena`;
+}
+
+/* ══════════════════════════════════════════════════════
+   BORRAR TODOS
+══════════════════════════════════════════════════════ */
+function openClearModal() {
+  if (!currentExpenses().length) { toast('No hay gastos para borrar', 'info'); return; }
+  document.getElementById('clear-confirm-month').textContent = `${MONTHS[state.currentMonth]} ${state.currentYear}`;
+  document.getElementById('clear-modal-overlay').classList.add('open');
+}
+function closeClearModal() { document.getElementById('clear-modal-overlay').classList.remove('open'); }
+function confirmClearAll() {
+  state.months[currentKey()] = [];
+  closeSubPanel(); closeClearModal();
+  toast('Todos los gastos eliminados', 'info');
+  render();
+}
+
+/* ══════════════════════════════════════════════════════
    EVENTOS — MES
 ══════════════════════════════════════════════════════ */
 document.getElementById('prev-month').addEventListener('click', () => {
@@ -1039,6 +1174,7 @@ document.querySelectorAll('.q-btn').forEach(btn => {
     document.querySelectorAll('.q-btn').forEach(b =>
       b.classList.toggle('active', parseInt(b.dataset.q) === q));
     renderSubPanel(activePanelId);
+    updateDuplicateBtn(activePanelId);
     clearSubForm();
   });
 });
@@ -1071,6 +1207,19 @@ document.getElementById('sub-save').addEventListener('click', () => {
   });
 });
 
+/* ── DUPLICAR SUBGASTOS ─────────────────────────────── */
+document.getElementById('sub-duplicate-btn')?.addEventListener('click', () => {
+  if (activePanelId) duplicateSubsToOtherQ(activePanelId);
+});
+
+/* ── BORRAR TODOS ───────────────────────────────────── */
+document.getElementById('btn-clear-all')?.addEventListener('click', openClearModal);
+document.getElementById('clear-cancel')?.addEventListener('click', closeClearModal);
+document.getElementById('clear-confirm')?.addEventListener('click', confirmClearAll);
+document.getElementById('clear-modal-overlay')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('clear-modal-overlay')) closeClearModal();
+});
+
 /* ══════════════════════════════════════════════════════
    TOAST
 ══════════════════════════════════════════════════════ */
@@ -1098,12 +1247,12 @@ export function initVanta() {
   const isLight = !state.darkMode;
   VANTA.FOG({
     el: '#vanta-bg',
-    mouseControls: true, touchControls: true, gyroControls: false,
+    mouseControls: false, touchControls: false, gyroControls: false,
     minHeight: 200, minWidth: 200,
     highlightColor: isLight ? 0xaabef5 : 0x384D95,
     midtoneColor:   isLight ? 0xffffff : 0x182250,
     lowlightColor:  isLight ? 0xffd4e6 : 0x8a1f4f,
     baseColor:      isLight ? 0xf5f7fa : 0x08091a,
-    speed: 1.80,
+    speed: 0.40,
   });
 }

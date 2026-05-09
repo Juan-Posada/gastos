@@ -67,7 +67,7 @@
   --trans-fast:     all 0.18s cubic-bezier(0.4,0,0.2,1);
 
   /* ── Layout ──────────────────────────────────────── */
-  --app-max:        700px;
+  --app-max:        800px;
   --sidebar:        min(420px, 100vw);
 
   /* ── Safe areas iOS ──────────────────────────────── */
@@ -678,25 +678,109 @@ header {
 
 /* ─── EXPENSE ITEM ──────────────────────────────────── */
 .expense-item {
+  display: grid;
+  grid-template-columns: 72px 1fr;
   background: var(--glass);
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--blur-sm);
   border-radius: var(--radius);
-  overflow: visible;
-  transition: var(--trans);
+  overflow: hidden;
+  transition: border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
   animation: fadeUp 0.4s ease both;
+  will-change: transform;
 }
 .expense-item:hover {
   background: var(--glass-hover);
   border-color: rgba(230,62,136,0.32);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
 }
 .expense-item.excluded { opacity: 0.38; }
+
+/* ── Side block: drag handle arriba, tipo abajo ─────── */
+.item-side-block {
+  grid-row: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid var(--glass-border);
+  padding: 10px 0 12px;
+  gap: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Franja de color sutil al fondo del side block */
+.item-side-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background: currentColor;
+  pointer-events: none;
+}
+
+/* Drag handle en la parte superior */
+.item-side-block .drag-handle {
+  width: 100%;
+  height: 30px;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.45;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+  border-bottom: 1px dashed rgba(currentColor, 0.2);
+  border-bottom-color: rgba(128,128,128,0.15);
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+.item-side-block .drag-handle:hover { opacity: 0.85; background: rgba(255,255,255,0.05); }
+.item-side-block .drag-handle:active { cursor: grabbing; opacity: 1; }
+.item-side-block .drag-handle i { font-size: 0.95rem; }
+
+/* Icono + label del tipo — parte inferior del side block */
+.item-side-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+.item-side-text i { font-size: 1.1rem; opacity: 0.90; }
+.item-side-text span {
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0.80;
+  line-height: 1.1;
+  max-width: 56px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-content-col {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
 
 .item-main {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 14px;
+  gap: 12px;
+  padding: 14px 14px 14px 26px;
   cursor: default;
   flex-wrap: nowrap;
 }
@@ -712,6 +796,7 @@ header {
   display: flex; align-items: center; justify-content: center;
   transition: var(--trans-fast);
   position: relative;
+  margin-right: 6px; /* separación extra del contenido */
 }
 .item-check.checked {
   background: linear-gradient(135deg, var(--tide), var(--rose));
@@ -727,57 +812,63 @@ header {
   display: block;
 }
 
-.item-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 6px currentColor;
-}
+
 
 .item-info { flex: 1; min-width: 0; }
 
+.item-info .name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .item-info .name {
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: 0.95rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.item-info .date-sep {
+  color: var(--glass-border);
+  font-size: 0.85rem;
+}
+
 .item-info .date {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--muted);
-  margin-top: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .item-info .sub-indicator {
-  font-size: 0.67rem;
-  color: var(--rose-light);
-  margin-top: 3px;
-  opacity: 0.8;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Badge quincenal */
-.quincenal-badge {
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-top: 5px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--tide-light);
-  background: rgba(56,77,149,0.14);
-  border: 1px solid rgba(56,77,149,0.28);
-  border-radius: 20px;
-  padding: 2px 7px;
-  flex-shrink: 0;
-  white-space: nowrap;
+  gap: 4px;
+  font-weight: 500;
+  opacity: 0.70;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.025);
+  padding: 2px 8px 2px 6px;
+  border-radius: 5px;
 }
-.quincenal-badge i { font-size: 0.68rem; }
+.item-info .sub-indicator strong { font-weight: 700; color: var(--muted); }
+.item-info .sub-indicator i { font-size: 0.68rem; opacity: 0.65; }
+
+/* Sin subgastos — misma forma, solo más apagado */
+.item-info .sub-indicator.sub-empty-hint {
+  opacity: 0.32;
+  font-style: italic;
+  font-weight: 400;
+  gap: 3px;
+}
+.item-info .sub-indicator.sub-empty-hint i { font-size: 0.62rem; }
+
+
 
 .item-amount {
   font-family: "Karla", sans-serif;
@@ -786,6 +877,15 @@ header {
   white-space: nowrap;
   flex-shrink: 0;
   letter-spacing: -0.01em;
+}
+
+/* Botones de acción — horizontal en desktop */
+.item-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .sub-btn {
@@ -804,6 +904,8 @@ header {
   white-space: nowrap;
   flex-shrink: 0;
   font-family: inherit;
+  width: auto;
+  justify-content: center;
 }
 .sub-btn:hover { background: rgba(56,77,149,0.22); border-color: rgba(56,77,149,0.44); }
 .sub-btn i { font-size: 0.78rem; }
@@ -1514,21 +1616,56 @@ header {
 @media (max-width: 480px) {
   .stats { grid-template-columns: repeat(3, 1fr); }
 
-  /* Desglose: se achica pero siempre visible */
-  .sub-btn {
-    padding: 5px 8px;
-    font-size: 0;        /* oculta el texto, deja solo el ícono */
-    gap: 0;
-    border-radius: 50%;
-    width: 30px; height: 30px;
-    justify-content: center;
+  /* Ocultar sub-indicator en móvil */
+  .item-info .sub-indicator { display: none; }
+
+  /* Fecha inline oculta — se mueve abajo del nombre */
+  .item-info .date-sep { display: none; }
+  .item-info .date {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .sub-btn i {
-    font-size: 0.9rem;
-    margin: 0;
+  /* Nombre sin truncar en una línea con wrap */
+  .item-info .name {
+    font-size: 0.88rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+  .item-info .name-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
   }
 
-  .expand-btn { margin-left: 0; }
+  /* Monto más compacto */
+  .item-amount { font-size: 0.82rem; }
+
+  /* Botones apilados en móvil con más separación */
+  .item-actions {
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .sub-btn {
+    padding: 4px 6px;
+    font-size: 0;
+    gap: 0;
+    border-radius: 7px;
+    width: 28px; height: 26px;
+  }
+  .sub-btn i { font-size: 0.85rem; margin: 0; }
+
+  .expand-btn { height: 26px; width: 28px; }
+
+  .item-main { padding: 12px 10px 12px 14px; gap: 8px; }
+  .item-check { margin-right: 2px; }
 
   .detail-fields { grid-template-columns: 1fr; }
   .subpanel-form-row { grid-template-columns: 1fr; }
@@ -1558,6 +1695,9 @@ header {
   .item-main { padding: 11px 10px; gap: 7px; }
   .item-info .name { font-size: 0.84rem; }
   .item-amount { font-size: 0.84rem; }
+  .expense-item { grid-template-columns: 60px 1fr; }
+  .item-side-text span { font-size: 0.42rem; }
+  .item-side-text i { font-size: 0.95rem; }
 
   .salary-row { padding: 9px 12px; }
   .salary-row label { font-size: 0.72rem; }
@@ -1617,7 +1757,7 @@ header {
 }
 
 /* FAB secundario — plantillas */
-.fab-templates {
+.fab-secondary {
   background: rgba(56,77,149,0.18);
   border: 1px solid rgba(56,77,149,0.40);
   color: var(--tide-light);
@@ -1626,7 +1766,7 @@ header {
   backdrop-filter: var(--blur-sm);
   box-shadow: 0 4px 18px rgba(56,77,149,0.25);
 }
-.fab-templates:hover {
+.fab-secondary:hover {
   background: rgba(56,77,149,0.30);
   border-color: rgba(56,77,149,0.60);
   transform: translateY(-2px);
@@ -1644,7 +1784,7 @@ header {
 @media (max-width: 400px) {
   .fab-label { display: none; }
   .fab-primary  { padding: 14px 16px; }
-  .fab-templates { padding: 12px 14px; }
+  .fab-secondary { padding: 12px 14px; }
 }
 
 /* ── MODAL ACCESO RÁPIDO (chips dentro del modal) ────── */
@@ -1911,6 +2051,13 @@ header {
 :root.light-mode .cat-group-header {
   background: rgba(255,255,255,0.80);
   border-color: rgba(56,77,149,0.15);
+}
+
+:root.light-mode .item-side-block {
+  border-right-color: rgba(56,77,149,0.12);
+}
+:root.light-mode .item-side-block .drag-handle {
+  border-bottom-color: rgba(56,77,149,0.10);
 }
 
 :root.light-mode .stat-card:hover,
@@ -2772,3 +2919,170 @@ header {
 :root.light-mode .modal-overlay#theme-modal-overlay {
   background: rgba(245,244,248,0.82);
 }
+/* ══════════════════════════════════════════════════════
+   DRAG & DROP — reordenar gastos
+══════════════════════════════════════════════════════ */
+
+/* Handle de arrastre visible en cada item */
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 32px;
+  color: var(--muted-2);
+  cursor: grab;
+  flex-shrink: 0;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  touch-action: none;
+}
+.drag-handle:hover  { color: var(--muted); background: rgba(255,255,255,0.06); }
+.drag-handle:active { cursor: grabbing; }
+.drag-handle i      { font-size: 0.85rem; pointer-events: none; }
+
+/* ── Item siendo arrastrado (ghost) ─────────────────── */
+.expense-item.dragging {
+  opacity: 0.25;
+  border-style: dashed;
+  border-color: rgba(230,62,136,0.50);
+  transform: scale(0.97);
+  box-shadow: none !important;
+  transition: opacity 0.12s ease, transform 0.12s ease !important;
+}
+
+/* ── Animación FLIP: item que acaba de reposicionarse ─ */
+@keyframes item-drop-settle {
+  0%   { transform: translateY(var(--flip-dy, 0px)) scale(1.015); box-shadow: 0 12px 36px rgba(230,62,136,0.22); }
+  60%  { transform: translateY(calc(var(--flip-dy, 0px) * 0.06)) scale(1.004); }
+  100% { transform: translateY(0) scale(1); box-shadow: none; }
+}
+.expense-item.flip-animate {
+  animation: item-drop-settle 0.42s cubic-bezier(0.34, 1.4, 0.64, 1) both !important;
+}
+
+/* ── Indicador de posición de drop (slot animado) ───── */
+.expense-item.drag-over-top,
+.expense-item.drag-over-bottom {
+  position: relative;
+}
+
+.expense-item.drag-over-top::before,
+.expense-item.drag-over-bottom::after {
+  content: "";
+  display: block;
+  height: 3px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--rose-dark), var(--rose-light), var(--tide-light));
+  position: absolute;
+  left: 10px; right: 10px;
+  animation: slot-pulse 0.7s ease-in-out infinite alternate;
+  box-shadow: 0 0 10px rgba(230,62,136,0.60);
+}
+.expense-item.drag-over-top::before    { top: -2px; }
+.expense-item.drag-over-bottom::after  { bottom: -2px; }
+/* Evitar que el ::before del .modal interfiera aquí */
+.expense-item.drag-over-top::after,
+.expense-item.drag-over-bottom::before { display: none; }
+
+@keyframes slot-pulse {
+  from { opacity: 0.65; box-shadow: 0 0 8px rgba(230,62,136,0.40); }
+  to   { opacity: 1;    box-shadow: 0 0 16px rgba(230,62,136,0.75); }
+}
+
+/* Feedback sutil en el fondo del item drop target */
+.expense-item.drag-over-top,
+.expense-item.drag-over-bottom {
+  background: rgba(230,62,136,0.06);
+  border-color: rgba(230,62,136,0.28);
+  transition: background 0.12s ease, border-color 0.12s ease !important;
+}
+
+/* En móvil el handle es más grande para ser táctil */
+@media (max-width: 640px) {
+  .drag-handle { width: 26px; height: 36px; }
+}
+
+/* ══════════════════════════════════════════════════════
+   BORRAR TODOS — botón en feed-header
+══════════════════════════════════════════════════════ */
+.feed-header { gap: 8px; }
+
+.btn-clear-all {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(248,113,113,0.22);
+  color: rgba(248,113,113,0.55);
+  cursor: pointer;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+  transition: var(--trans-fast);
+  flex-shrink: 0;
+}
+.btn-clear-all:hover {
+  background: var(--danger-bg);
+  border-color: rgba(248,113,113,0.50);
+  color: var(--danger);
+}
+.btn-clear-all i { pointer-events: none; }
+
+/* ══════════════════════════════════════════════════════
+   MODAL CONFIRMACIÓN BORRAR TODOS
+══════════════════════════════════════════════════════ */
+.clear-confirm-modal {
+  text-align: center;
+  padding: 32px 24px 24px;
+  max-width: 360px;
+}
+.clear-confirm-icon {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  background: var(--danger-bg);
+  border: 1px solid rgba(248,113,113,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  color: var(--danger);
+  margin: 0 auto 18px;
+}
+.clear-confirm-modal h3 {
+  font-size: 1.1rem; font-weight: 800; margin-bottom: 10px;
+  color: var(--text); -webkit-text-fill-color: initial; background: none;
+}
+.clear-confirm-modal p {
+  font-size: 0.83rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px;
+}
+.clear-confirm-actions { justify-content: center; gap: 12px; }
+.btn-delete-confirm {
+  background: var(--danger-bg);
+  border: 1px solid rgba(248,113,113,0.35);
+  color: var(--danger);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: var(--radius-xs);
+  font-family: "Karla", sans-serif; font-size: 0.83rem; font-weight: 700;
+  cursor: pointer; transition: var(--trans-fast);
+}
+.btn-delete-confirm:hover {
+  background: rgba(248,113,113,0.22); border-color: var(--danger);
+}
+
+/* ══════════════════════════════════════════════════════
+   DUPLICAR SUBGASTOS — botón en subpanel
+══════════════════════════════════════════════════════ */
+.sub-duplicate-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: calc(100% - 36px); margin: 0 18px 10px;
+  background: rgba(56,77,149,0.10);
+  border: 1px dashed rgba(56,77,149,0.40);
+  border-radius: var(--radius-sm);
+  color: var(--tide-light);
+  cursor: pointer; font-family: "Karla", sans-serif;
+  font-size: 0.80rem; font-weight: 600; padding: 9px 14px;
+  transition: var(--trans-fast); flex-shrink: 0;
+}
+.sub-duplicate-btn:hover {
+  background: rgba(56,77,149,0.22); border-color: rgba(56,77,149,0.60);
+  border-style: solid; color: #fff;
+}
+.sub-duplicate-btn i, .sub-duplicate-btn span { pointer-events: none; }
+.sub-duplicate-btn.hidden { display: none !important; }

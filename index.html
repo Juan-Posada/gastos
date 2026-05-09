@@ -132,6 +132,9 @@
     <div class="feed-header">
       <h2>Gastos</h2>
       <span class="count-badge" id="feed-count">0</span>
+      <button class="btn-clear-all" id="btn-clear-all" title="Borrar todos los gastos del mes">
+        <i data-lucide="trash-2"></i>
+      </button>
     </div>
     <div id="feed"></div>
   </div>
@@ -303,6 +306,10 @@
       </div>
     </div>
 
+    <button class="sub-duplicate-btn hidden" id="sub-duplicate-btn">
+      <i data-lucide="copy"></i>
+      <span>Duplicar a la otra quincena</span>
+    </button>
     <div id="subpanel-feed"></div>
 
     <div class="subpanel-add">
@@ -344,6 +351,21 @@
         <button class="btn btn-cancel" id="theme-cancel">Cancelar</button>
         <button class="btn btn-save" id="theme-confirm">
           <i data-lucide="refresh-cw"></i> Cambiar y recargar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ MODAL BORRAR TODOS ════ -->
+  <div class="modal-overlay" id="clear-modal-overlay">
+    <div class="modal clear-confirm-modal">
+      <div class="clear-confirm-icon"><i data-lucide="trash-2"></i></div>
+      <h3 id="clear-confirm-title">¿Borrar todos los gastos?</h3>
+      <p>Esta acción eliminará permanentemente todos los gastos de <strong id="clear-confirm-month"></strong>. No se puede deshacer.</p>
+      <div class="modal-actions clear-confirm-actions">
+        <button class="btn btn-cancel" id="clear-cancel">Cancelar</button>
+        <button class="btn-delete-confirm" id="clear-confirm">
+          <i data-lucide="trash-2"></i> Sí, borrar todo
         </button>
       </div>
     </div>
