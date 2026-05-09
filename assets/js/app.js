@@ -482,46 +482,18 @@ function renderStats() {
 }
 
 /* ── FEED ───────────────────────────────────────────── */
-function reorderExpense(srcId, targetId, before) {
-  const key  = currentKey();
-  const list = state.months[key] || [];
-  const si   = list.findIndex(e => e.id === srcId);
-  const ti   = list.findIndex(e => e.id === targetId);
-  if (si === -1 || ti === -1) return;
+function reorderExpense(oldIndex, newIndex) {
+  const key = currentKey();
+  const list = [...(state.months[key] || [])];
+  if (oldIndex === newIndex) return;
 
-  // Capturar posiciones ANTES del reorden (FLIP — First)
-  const feed = document.getElementById('feed');
-  const snapshots = new Map();
-  feed.querySelectorAll('.expense-item').forEach(el => {
-    snapshots.set(el.dataset.id, el.getBoundingClientRect().top);
-  });
+  const [moved] = list.splice(oldIndex, 1);
+  list.splice(newIndex, 0, moved);
+  state.months[key] = list;
 
-  const items = [...list];
-  const [moved] = items.splice(si, 1);
-  const newTi   = items.findIndex(e => e.id === targetId);
-  items.splice(before ? newTi : newTi + 1, 0, moved);
-  state.months[key] = items;
-  render();
-
-  // FLIP — Last & Invert & Play
-  requestAnimationFrame(() => {
-    feed.querySelectorAll('.expense-item').forEach(el => {
-      const prevTop = snapshots.get(el.dataset.id);
-      if (prevTop === undefined) return;
-      const currTop = el.getBoundingClientRect().top;
-      const dy = prevTop - currTop;
-      if (Math.abs(dy) < 2) return;
-      el.style.setProperty('--flip-dy', `${dy}px`);
-      el.classList.remove('flip-animate');
-      // Force reflow
-      void el.offsetWidth;
-      el.classList.add('flip-animate');
-      el.addEventListener('animationend', () => {
-        el.classList.remove('flip-animate');
-        el.style.removeProperty('--flip-dy');
-      }, { once: true });
-    });
-  });
+  save();
+  // No llamamos a render() aquí para evitar parpadeos, 
+  // ya que Sortable ya movió el DOM.
 }
 
 function renderFeed() {
@@ -550,6 +522,24 @@ function renderFeed() {
 
   feed.innerHTML = '';
   expenses.forEach((exp, i) => feed.appendChild(buildItem(exp, i, false)));
+
+  // Inicializar SortableJS
+  if (window.Sortable) {
+    // Destruir instancia previa si existe (opcional, Sortable suele manejarlo pero es más limpio)
+    if (feed._sortable) feed._sortable.destroy();
+    
+    feed._sortable = new Sortable(feed, {
+      animation: 350,
+      handle: '.drag-handle', // Solo arrastrable desde el tirador
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      forceFallback: false, // Usar nativo cuando sea posible, pero Sortable maneja Touch
+      onEnd: (evt) => {
+        reorderExpense(evt.oldIndex, evt.newIndex);
+      }
+    });
+  }
+
   lucide.createIcons();
 }
 
@@ -663,36 +653,7 @@ function buildItem(exp, idx, indented) {
   amtInp.addEventListener('input', () => { amtInp.value = fmtInput(amtInp.value); });
   amtInp.addEventListener('blur',  () => { amtInp.value = fmtInput(amtInp.value); });
 
-  // ── DnD ──────────────────────────────────────────────
-  wrap.setAttribute('draggable', 'true');
-  wrap.addEventListener('dragstart', e => {
-    dragSrcId = exp.id;
-    setTimeout(() => wrap.classList.add('dragging'), 0);
-    e.dataTransfer.effectAllowed = 'move';
-  });
-  wrap.addEventListener('dragend', () => {
-    wrap.classList.remove('dragging');
-    document.querySelectorAll('.expense-item').forEach(el =>
-      el.classList.remove('drag-over-top','drag-over-bottom'));
-    dragSrcId = null;
-  });
-  wrap.addEventListener('dragover', e => {
-    if (!dragSrcId || dragSrcId === exp.id) return;
-    e.preventDefault();
-    document.querySelectorAll('.expense-item').forEach(el =>
-      el.classList.remove('drag-over-top','drag-over-bottom'));
-    const mid = wrap.getBoundingClientRect().top + wrap.getBoundingClientRect().height / 2;
-    wrap.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
-  });
-  wrap.addEventListener('dragleave', () =>
-    wrap.classList.remove('drag-over-top','drag-over-bottom'));
-  wrap.addEventListener('drop', e => {
-    if (!dragSrcId || dragSrcId === exp.id) return;
-    e.preventDefault();
-    const mid    = wrap.getBoundingClientRect().top + wrap.getBoundingClientRect().height / 2;
-    reorderExpense(dragSrcId, exp.id, e.clientY < mid);
-    wrap.classList.remove('drag-over-top','drag-over-bottom');
-  });
+  // DnD manejado por SortableJS en renderFeed()
 
   wrap.querySelectorAll('[data-action="change-type"]').forEach(btn => {
     btn.addEventListener('click', e => {
