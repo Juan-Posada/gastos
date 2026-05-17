@@ -3347,20 +3347,21 @@ header {
 
 .pwa-banner-close {
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--muted);
-  width: 30px; height: 30px;
-  border-radius: 50%;
+  font-family: "Karla", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
   transition: var(--trans-fast);
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 .pwa-banner-close:hover {
   background: rgba(255, 255, 255, 0.12);
   color: var(--text);
 }
-.pwa-banner-close i { font-size: 0.85rem; pointer-events: none; }
 
 /* ── Guía iOS ───────────────────────────────────────── */
 .pwa-ios-guide {
