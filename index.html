@@ -12,7 +12,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="assets/css/master.css" />
   <link rel="icon" type="image/png" href="assets/images/favicon.png?v=3" />
-  <link rel="apple-touch-icon" href="assets/images/favicon.png?v=3" />
+  <link rel="apple-touch-icon" href="assets/images/logo.png" />
+  <link rel="manifest" href="manifest.json" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vanta/dist/vanta.fog.min.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -416,6 +417,35 @@
         <button class="btn-delete-confirm" id="clear-confirm">
           <i data-lucide="trash-2"></i> Sí, borrar todo
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ BANNER INSTALACIÓN PWA ════ -->
+  <div id="pwa-install-banner" class="pwa-install-banner">
+    <div class="pwa-banner-content">
+      <div class="pwa-banner-icon">
+        <img src="assets/images/logo.png" alt="finZa" />
+      </div>
+      <div class="pwa-banner-text">
+        <strong class="pwa-banner-title">¡Instala finZa!</strong>
+        <p class="pwa-banner-desc">Accede más rápido desde tu pantalla de inicio.</p>
+        <div class="pwa-ios-guide hidden">
+          <div class="pwa-ios-step">
+            <span class="pwa-ios-step-num">1</span>
+            <span>Toca el botón <strong>Compartir</strong>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+            </span>
+          </div>
+          <div class="pwa-ios-step">
+            <span class="pwa-ios-step-num">2</span>
+            <span>Selecciona <strong>"Agregar a pantalla de inicio"</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="pwa-banner-actions">
+        <button class="pwa-banner-install"><i data-lucide="download"></i> Instalar</button>
+        <button class="pwa-banner-close" title="Cerrar"><i data-lucide="x"></i></button>
       </div>
     </div>
   </div>

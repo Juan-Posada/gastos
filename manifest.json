@@ -1,0 +1,25 @@
+{
+  "name": "finZa - Mis gastos",
+  "short_name": "finZa",
+  "description": "Tu resumen financiero mensual, siempre contigo.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08091a",
+  "theme_color": "#0259DD",
+  "icons": [
+    {
+      "src": "assets/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
