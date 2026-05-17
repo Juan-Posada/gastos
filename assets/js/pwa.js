@@ -6,6 +6,26 @@
 ══════════════════════════════════════════════════════ */
 
 let deferredPrompt = null;
+let toastFn = null;
+
+/* ══════════════════════════════════════════════════════
+   0. CAPTURA TEMPRANA DE beforeinstallprompt
+   Se ejecuta inmediatamente al cargar el módulo,
+   ANTES de que auth/firebase estén listos.
+══════════════════════════════════════════════════════ */
+window.addEventListener('beforeinstallprompt', e => {
+  // No llamamos e.preventDefault() → Chrome muestra su mini-infobar nativo
+  deferredPrompt = e;
+  console.log('[PWA] beforeinstallprompt capturado');
+  // Si la UI ya está lista, mostrar el banner
+  showInstallBanner();
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log('[PWA] App instalada exitosamente');
+  deferredPrompt = null;
+  dismissBanner();
+});
 
 /* ══════════════════════════════════════════════════════
    1. REGISTRO DEL SERVICE WORKER
@@ -62,12 +82,12 @@ function dismissBanner() {
 }
 
 function showInstallBanner() {
-  // No mostrar si ya instaló, ya descartó, o no hay banner en el DOM
+  // No mostrar si ya instaló o ya descartó
   if (isStandalone() || wasDismissed()) return;
 
   const platform = getPlatform();
   const banner = document.getElementById('pwa-install-banner');
-  if (!banner) return;
+  if (!banner) return; // La UI aún no está lista
 
   const titleEl    = banner.querySelector('.pwa-banner-title');
   const descEl     = banner.querySelector('.pwa-banner-desc');
@@ -80,24 +100,22 @@ function showInstallBanner() {
     descEl.textContent = 'Agrégala a tu pantalla de inicio para una mejor experiencia:';
     installBtn.classList.add('hidden');
     iosGuide.classList.remove('hidden');
-  } else if (platform === 'android' && deferredPrompt) {
-    // En Android con prompt disponible
-    titleEl.textContent = '¡Instala finZa!';
-    descEl.textContent = 'Accede más rápido desde tu pantalla de inicio.';
-    installBtn.classList.remove('hidden');
-    iosGuide.classList.add('hidden');
-  } else if (platform === 'desktop' && deferredPrompt) {
-    // En Desktop con prompt disponible
-    titleEl.textContent = 'Instala finZa en tu computador';
-    descEl.textContent = 'Accede sin abrir el navegador.';
+  } else if (deferredPrompt) {
+    // Android o Desktop con prompt disponible
+    titleEl.textContent = platform === 'android'
+      ? '¡Instala finZa!'
+      : 'Instala finZa en tu computador';
+    descEl.textContent = platform === 'android'
+      ? 'Accede más rápido desde tu pantalla de inicio.'
+      : 'Accede sin abrir el navegador.';
     installBtn.classList.remove('hidden');
     iosGuide.classList.add('hidden');
   } else {
-    // No hay prompt y no es iOS → no mostrar nada
+    // No hay prompt y no es iOS → no mostrar
     return;
   }
 
-  // Mostrar con animación
+  // Mostrar con animación (delay de 2s para no ser invasivo)
   setTimeout(() => banner.classList.add('show'), 2000);
 }
 
@@ -119,18 +137,17 @@ function handleInstallClick() {
 /* ══════════════════════════════════════════════════════
    4. DETECCIÓN DE CONECTIVIDAD
 ══════════════════════════════════════════════════════ */
-function setupConnectivityWatcher(toastFn) {
+function setupConnectivityWatcher(toast) {
   function notifyOffline() {
-    toastFn('Sin conexión a internet. Algunas funciones no estarán disponibles.', 'error');
+    toast('Sin conexión a internet. Algunas funciones no estarán disponibles.', 'error');
   }
 
   function notifyOnline() {
-    toastFn('Conexión restablecida', 'success');
+    toast('Conexión restablecida', 'success');
   }
 
   // Verificar estado inicial
   if (!navigator.onLine) {
-    // Esperar un poco para que la UI esté lista
     setTimeout(notifyOffline, 3000);
   }
 
@@ -142,45 +159,36 @@ function setupConnectivityWatcher(toastFn) {
 /* ══════════════════════════════════════════════════════
    5. INICIALIZACIÓN
 ══════════════════════════════════════════════════════ */
-export function initPWA(toastFn) {
+export function initPWA(toast) {
+  toastFn = toast;
+
   // 1. Registrar Service Worker
   registerServiceWorker();
 
-  // 2. Capturar el evento beforeinstallprompt (Android/Desktop)
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    deferredPrompt = e;
-    console.log('[PWA] beforeinstallprompt capturado');
-    // Mostrar banner una vez que tengamos el prompt
-    showInstallBanner();
-  });
-
-  // 3. Detectar si fue instalada
-  window.addEventListener('appinstalled', () => {
-    console.log('[PWA] App instalada exitosamente');
-    deferredPrompt = null;
-    dismissBanner();
-  });
-
-  // 4. Para iOS, mostrar el banner después de un delay
+  // 2. Para iOS, mostrar el banner después de un delay
   if (getPlatform() === 'ios' && !isStandalone() && !wasDismissed()) {
     setTimeout(showInstallBanner, 3000);
   }
 
-  // 5. Vincular botón de instalación
+  // 3. Si ya capturamos el prompt antes de init, intentar mostrar el banner ahora
+  if (deferredPrompt) {
+    showInstallBanner();
+  }
+
+  // 4. Vincular botón de instalación
   const installBtn = document.querySelector('.pwa-banner-install');
   if (installBtn) {
     installBtn.addEventListener('click', handleInstallClick);
   }
 
-  // 6. Vincular botón de cerrar
+  // 5. Vincular botón de cerrar
   const closeBtn = document.querySelector('.pwa-banner-close');
   if (closeBtn) {
     closeBtn.addEventListener('click', dismissBanner);
   }
 
-  // 7. Configurar watcher de conectividad
-  if (toastFn) {
-    setupConnectivityWatcher(toastFn);
+  // 6. Configurar watcher de conectividad
+  if (toast) {
+    setupConnectivityWatcher(toast);
   }
 }
