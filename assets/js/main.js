@@ -5,6 +5,7 @@
 
 import { onAuthReady, signInWithGoogle, signOut } from "./auth.js";
 import { loadFromFirestore, render, toast, initVanta } from "./app.js";
+import { initPWA } from "./pwa.js";
 
 /* ── Elementos de UI ──────────────────────────────── */
 const loginScreen    = document.getElementById('login-screen');
@@ -66,6 +67,12 @@ onAuthReady(async (user) => {
   } else {
     showLogin();
     setLoading(false);
+  }
+
+  // Inicializar PWA (una sola vez, independiente del estado de auth)
+  if (!window._pwaInit) {
+    initPWA(toast);
+    window._pwaInit = true;
   }
 });
 

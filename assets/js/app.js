@@ -1280,10 +1280,10 @@ export function initVanta() {
     el: '#vanta-bg',
     mouseControls: false, touchControls: false, gyroControls: false,
     minHeight: 200, minWidth: 200,
-    highlightColor: isLight ? 0xaabef5 : 0x384D95,
-    midtoneColor:   isLight ? 0xffffff : 0x182250,
-    lowlightColor:  isLight ? 0xffd4e6 : 0x8a1f4f,
-    baseColor:      isLight ? 0xf5f7fa : 0x08091a,
+    highlightColor: isLight ? 0x84AFFB : 0x0259DD,
+    midtoneColor:   isLight ? 0xffffff : 0x012c70,
+    lowlightColor:  isLight ? 0xFF6648 : 0xd64f33,
+    baseColor:      isLight ? 0xFFE1D7 : 0x08091a,
     speed: 0.40,
   });
 }
