@@ -17,8 +17,8 @@ window.addEventListener('beforeinstallprompt', e => {
   // No llamamos e.preventDefault() → Chrome muestra su mini-infobar nativo
   deferredPrompt = e;
   console.log('[PWA] beforeinstallprompt capturado');
-  // Si la UI ya está lista, mostrar el banner
-  showInstallBanner();
+  // No mostramos el banner aquí — esperamos a que initPWA() lo haga
+  // después de que la pantalla de carga desaparezca
 });
 
 window.addEventListener('appinstalled', () => {
@@ -62,18 +62,11 @@ function isStandalone() {
 
 /* ══════════════════════════════════════════════════════
    3. BANNER DE INSTALACIÓN
+   Se muestra SIEMPRE hasta que la app esté instalada.
+   Solo se cierra cuando el usuario toca "Entendido".
 ══════════════════════════════════════════════════════ */
-const DISMISS_KEY = 'finza-pwa-dismissed';
-const DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 días
 
-function wasDismissed() {
-  const ts = localStorage.getItem(DISMISS_KEY);
-  if (!ts) return false;
-  return (Date.now() - parseInt(ts, 10)) < DISMISS_DURATION;
-}
-
-function dismissBanner() {
-  localStorage.setItem(DISMISS_KEY, String(Date.now()));
+function closeBanner() {
   const banner = document.getElementById('pwa-install-banner');
   if (banner) {
     banner.classList.remove('show');
@@ -82,12 +75,12 @@ function dismissBanner() {
 }
 
 function showInstallBanner() {
-  // No mostrar si ya instaló o ya descartó
-  if (isStandalone() || wasDismissed()) return;
+  // Solo ocultar si ya está instalada como app standalone
+  if (isStandalone()) return;
 
   const platform = getPlatform();
   const banner = document.getElementById('pwa-install-banner');
-  if (!banner) return; // La UI aún no está lista
+  if (!banner) return;
 
   const titleEl    = banner.querySelector('.pwa-banner-title');
   const descEl     = banner.querySelector('.pwa-banner-desc');
@@ -95,13 +88,11 @@ function showInstallBanner() {
   const iosGuide   = banner.querySelector('.pwa-ios-guide');
 
   if (platform === 'ios') {
-    // En iOS no hay prompt nativo, mostrar instrucciones manuales
     titleEl.textContent = '¡Instala finZa!';
     descEl.textContent = 'Agrégala a tu pantalla de inicio para una mejor experiencia:';
     installBtn.classList.add('hidden');
     iosGuide.classList.remove('hidden');
   } else if (deferredPrompt) {
-    // Android o Desktop con prompt disponible
     titleEl.textContent = platform === 'android'
       ? '¡Instala finZa!'
       : 'Instala finZa en tu computador';
@@ -130,7 +121,7 @@ function handleInstallClick() {
       console.log('[PWA] Usuario rechazó la instalación');
     }
     deferredPrompt = null;
-    dismissBanner();
+    closeBanner();
   });
 }
 
@@ -146,12 +137,10 @@ function setupConnectivityWatcher(toast) {
     toast('Conexión restablecida', 'success');
   }
 
-  // Verificar estado inicial
   if (!navigator.onLine) {
     setTimeout(notifyOffline, 3000);
   }
 
-  // Escuchar cambios
   window.addEventListener('offline', notifyOffline);
   window.addEventListener('online', notifyOnline);
 }
@@ -166,11 +155,11 @@ export function initPWA(toast) {
   registerServiceWorker();
 
   // 2. Para iOS, mostrar el banner después de un delay
-  if (getPlatform() === 'ios' && !isStandalone() && !wasDismissed()) {
+  if (getPlatform() === 'ios' && !isStandalone()) {
     setTimeout(showInstallBanner, 3000);
   }
 
-  // 3. Si ya capturamos el prompt antes de init, intentar mostrar el banner ahora
+  // 3. Si ya capturamos el prompt antes de init, mostrar el banner
   if (deferredPrompt) {
     showInstallBanner();
   }
@@ -181,10 +170,10 @@ export function initPWA(toast) {
     installBtn.addEventListener('click', handleInstallClick);
   }
 
-  // 5. Vincular botón de cerrar
+  // 5. Vincular botón "Entendido" (cierra el banner para esta sesión)
   const closeBtn = document.querySelector('.pwa-banner-close');
   if (closeBtn) {
-    closeBtn.addEventListener('click', dismissBanner);
+    closeBtn.addEventListener('click', closeBanner);
   }
 
   // 6. Configurar watcher de conectividad
@@ -192,3 +181,4 @@ export function initPWA(toast) {
     setupConnectivityWatcher(toast);
   }
 }
+
